@@ -81,7 +81,7 @@ const MainLayout = ({ onLogout, username, userRole }) => {
                     <ListItemText primary="Download Report" />
                   </ListItem>
                 </>
-              ) : userRole === 'interviewer' ? (
+              ) : userRole === 'Interviewer' ? (
                 <>
                   <ListItem button component={Link} to="/overview">
                     <ListItemIcon>
@@ -136,7 +136,7 @@ const MainLayout = ({ onLogout, username, userRole }) => {
             )}
             
             {/* Interviewer Routes */}
-            {userRole === 'interviewer' && (
+            {userRole === 'Interviewer' && (
               <>
                 <Route path="/" element={<Navigate to="/account-info" />} />
                 <Route path="/overview" element={<OverviewPage username={username} />} />

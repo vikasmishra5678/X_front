@@ -19,6 +19,7 @@ const AddUserPage = () => {
   const [filterRole, setFilterRole] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editPanelDialogOpen, setEditPanelDialogOpen] = useState(false);
   const [stageCategory, setStageCategory] = useState('');
   const [experienceCategory, setExperienceCategory] = useState('');
   const [selectedSkills, setSelectedSkills] = useState([]);
@@ -55,7 +56,7 @@ const AddUserPage = () => {
     if (!email) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email is invalid';
     if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters long';
+    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters long';
     if (!phone) newErrors.phone = 'Phone number is required'; // Phone validation
     if (!role) newErrors.role = 'Role is required';
     setErrors(newErrors);
@@ -88,6 +89,7 @@ const AddUserPage = () => {
   };
 
   const handleConfirmInterviewer = async () => {
+
     if (!stageCategory || !experienceCategory || selectedSkills.length === 0) {
       toast.error('Please fill out all fields for the interviewer.');
       return;
@@ -95,17 +97,28 @@ const AddUserPage = () => {
 
     try {
       const interviewerDetails = { // Use the ID of the created user
-        stageCategory,
-        experienceCategory,
-        skillSet: selectedSkills
+        stages_category: [stageCategory],
+        experience_category: experienceCategory,
+        domain: selectedSkills
       };
-      await axios.post('http://127.0.0.1:5000/users/{editIndex}/panels', interviewerDetails, axiosConfig); // Replace with your API endpoint
+      if(!editPanelDialogOpen){
+      await axios.post(`http://127.0.0.1:5000/users/${editIndex}/panel`, interviewerDetails, axiosConfig); // Replace with your API endpoint
       toast.success('Interviewer details added successfully!');
+      }
+      else{
+      await axios.patch(`http://127.0.0.1:5000/users/${editIndex}/panel`, interviewerDetails, axiosConfig); // Replace with your API endpoint
+      toast.success('Interviewer details updated successfully!');
+      }
       setOpenDialog(false);
       fetchUsers();
       clearFields();
     } catch (error) {
+      if(!editPanelDialogOpen){
       toast.error('Failed to add interviewer details');
+      }
+      else{
+        toast.error('Failed to update interviewer details'); 
+      }
     }
   };
 
@@ -130,9 +143,9 @@ const AddUserPage = () => {
 
   const handleDeleteUser = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/users/${id}`); // Replace with your API endpoint
-      fetchUsers();
+      await axios.delete(`http://127.0.0.1:5000/users/${id}`, axiosConfig); // Replace with your API endpoint
       toast.success('User deleted successfully!');
+      fetchUsers();
     } catch (error) {
       toast.error('Failed to delete user');
     }
@@ -155,18 +168,28 @@ const AddUserPage = () => {
   };
 
   const handleUpdateUser = async () => {
-    if (validateForm()) {
-      const updatedUser = { name, email, password, phone, role, stageCategory, experienceCategory, skillSet: selectedSkills };
-      try {
-        await axios.patch(`http://127.0.0.1:5000/users/${editIndex}`, updatedUser); // Replace with your API endpoint
-        fetchUsers(); // Fetch updated user list
-        toast.success('User updated successfully!');
+    try {
+        const updatedUser = { name, email, password, phone, role };
+        const response = await axios.post(`http://127.0.0.1:5000/users/${editIndex}`, updatedUser, axiosConfig); // Replace with your API endpoint
+        setUsers([...users, response.data]); // Add user to state
+        fetchUsers();
         setEditDialogOpen(false);
-        clearFields();
+        toast.success('User updated successfully!');
+        if (role === 'Interviewer') {
+          setOpenDialog(true);
+          setEditPanelDialogOpen(true)
+          // Store user ID for later use
+          setEditIndex(response.data.id);
+        } else {
+          clearFields();
+        }
       } catch (error) {
-        toast.error('Failed to update user');
+        if (error.response && error.response.data) {
+          toast.error(error.response.data.message || 'Failed to update user');
+        } else {
+          toast.error('Failed to update user');
+        }
       }
-    }
   };
 
   return (
