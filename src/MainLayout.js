@@ -60,25 +60,25 @@ const MainLayout = ({ onLogout, username, userRole }) => {
                     <ListItemIcon>
                       <DashboardIcon sx={{ color: '#006064' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Admin Overview" />
+                    <ListItemText primary="Overview" />
                   </ListItem>
                   <ListItem button component={Link} to="/add-user">
                     <ListItemIcon>
                       <AddIcon sx={{ color: '#006064' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Add User" />
+                    <ListItemText primary="Manage Users" />
                   </ListItem>
                   <ListItem button component={Link} to="/upload-profile">
                     <ListItemIcon>
                       <UploadIcon sx={{ color: '#006064' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Upload Profile" />
+                    <ListItemText primary="Upload Candidate Data" />
                   </ListItem>
                   <ListItem button component={Link} to="/download-report">
                     <ListItemIcon>
                       <DownloadIcon sx={{ color: '#006064' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Download Report" />
+                    <ListItemText primary="Download Reports" />
                   </ListItem>
                 </>
               ) : userRole === 'Interviewer' ? (
@@ -93,13 +93,13 @@ const MainLayout = ({ onLogout, username, userRole }) => {
                     <ListItemIcon>
                       <BookIcon sx={{ color: '#006064' }} />
                     </ListItemIcon>
-                    <ListItemText primary="Book My Slots" />
+                    <ListItemText primary="Add Free Slots" />
                   </ListItem>
                   <ListItem button component={Link} to="/view-slots">
                     <ListItemIcon>
                       <EventNoteIcon sx={{ color: '#006064' }} />
                     </ListItemIcon>
-                    <ListItemText primary="View My Slots" />
+                    <ListItemText primary="View Slots" />
                   </ListItem>
                 </>
               ) : null}
@@ -124,6 +124,9 @@ const MainLayout = ({ onLogout, username, userRole }) => {
           </AppBar>
           <Toolbar />
           <Routes>
+            {/* Common Route */}
+            <Route path="/account-info" element={<AccountInfoPage />} />
+
             {/* Admin Routes */}
             {userRole === 'admin' && (
               <>
@@ -144,9 +147,6 @@ const MainLayout = ({ onLogout, username, userRole }) => {
                 <Route path="/view-slots" element={<ViewSlotsPage />} />
               </>
             )}
-
-            {/* Common Route */}
-            <Route path="/account-info" element={<AccountInfoPage />} />
             
           </Routes>
         </Box>

@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { TextField, Button, Paper, MenuItem, Select, InputLabel, FormControl, Box, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, ListItemText, OutlinedInput, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton } from '@mui/material';
+import { TextField, Button, Paper, MenuItem, Select, InputLabel, FormControl, Box, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, ListItemText, OutlinedInput, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import LockIcon from '@mui/icons-material/Lock';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { toast, ToastContainer } from 'react-toastify';
 
-const skills = [
-  'SAP BASIS', 'SAP HANA', 'SAP ABAP', 'SAP Security', 'SAP FI/CO', 'SAP MM', 'SAP SD', 'SAP BW'
-];
+const skills = ['SAP BASIS', 'SAP HANA', 'SAP ABAP', 'SAP Security', 'SAP FI/CO', 'SAP MM', 'SAP SD', 'SAP BW'];
 
 const AddUserPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState(''); // New phone state
+  const [phone, setPhone] = useState(''); 
   const [role, setRole] = useState('');
   const [users, setUsers] = useState([]);
   const [filterRole, setFilterRole] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
+  const [addUserExpanded, setAddUserExpanded] = useState(false); // Collapsible state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editPanelDialogOpen, setEditPanelDialogOpen] = useState(false);
-  const [stageCategory, setStageCategory] = useState('');
+  const [stageCategory, setStageCategory] = useState([]);
   const [experienceCategory, setExperienceCategory] = useState('');
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [errors, setErrors] = useState({});
@@ -35,10 +38,6 @@ const AddUserPage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   // Fetch users from the API
   const fetchUsers = async () => {
     try {
@@ -48,6 +47,10 @@ const AddUserPage = () => {
       toast.error('Failed to fetch users');
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // Form validation logic
   const validateForm = () => {
@@ -79,8 +82,8 @@ const AddUserPage = () => {
           clearFields();
         }
       } catch (error) {
-        if (error.response && error.response.data) {
-          toast.error(error.response.data.message || 'Failed to add user');
+        if (error.response.data.error.statusCode === 409){
+          toast.error('Email is already taken');
         } else {
           toast.error('Failed to add user');
         }
@@ -90,14 +93,14 @@ const AddUserPage = () => {
 
   const handleConfirmInterviewer = async () => {
 
-    if (!stageCategory || !experienceCategory || selectedSkills.length === 0) {
+    if (!stageCategory.length === 0 || !experienceCategory || selectedSkills.length === 0) {
       toast.error('Please fill out all fields for the interviewer.');
       return;
     }
 
     try {
       const interviewerDetails = { // Use the ID of the created user
-        stages_category: [stageCategory],
+        stages_category: stageCategory,
         experience_category: experienceCategory,
         domain: selectedSkills
       };
@@ -110,6 +113,7 @@ const AddUserPage = () => {
       toast.success('Interviewer details updated successfully!');
       }
       setOpenDialog(false);
+      setEditPanelDialogOpen(false);
       fetchUsers();
       clearFields();
     } catch (error) {
@@ -122,19 +126,39 @@ const AddUserPage = () => {
     }
   };
 
+  const handleChangePassword = async (id) => {
+    const newpassword = prompt('Enter new password:');
+    if (!newpassword) return;
+    
+    if (newpassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      await axios.post(`http://127.0.0.1:5000/users/${id}/change-password`, { newPassword: newpassword }, axiosConfig);
+      toast.success('Password updated successfully!');
+    } catch (error) {
+      toast.error('Failed to update password');
+    }
+  };
+
   const clearFields = () => {
     setName('');
     setEmail('');
     setPassword('');
     setPhone(''); // Clear phone field
     setRole('');
-    setStageCategory('');
+    setStageCategory([]);
     setExperienceCategory('');
     setSelectedSkills([]);
     setErrors({});
   };
 
-  const filteredUsers = filterRole ? users.filter(user => user.role === filterRole) : users;
+  const filteredUsers = users.filter(user =>
+    (filterRole ? user.role === filterRole : true) &&
+    (searchQuery ? Object.values(user).some(value => String(value).toLowerCase().includes(searchQuery.toLowerCase())) : true)
+  );
 
   const handleSkillChange = (event) => {
     const { target: { value } } = event;
@@ -143,7 +167,7 @@ const AddUserPage = () => {
 
   const handleDeleteUser = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/users/${id}`, axiosConfig); // Replace with your API endpoint
+      await axios.delete(`http://127.0.0.1:5000/users/${id}`, axiosConfig);
       toast.success('User deleted successfully!');
       fetchUsers();
     } catch (error) {
@@ -155,23 +179,16 @@ const AddUserPage = () => {
     const user = users[index];
     setName(user.name);
     setEmail(user.email);
-    setPassword(user.password);
-    setPhone(user.phone); // Set phone field
+    setPhone(user.phone); 
     setRole(user.role);
-    if (user.role === 'Interviewer') {
-      setStageCategory(user.stageCategory);
-      setExperienceCategory(user.experienceCategory);
-      setSelectedSkills(user.skillSet);
-    }
-    setEditIndex(user.id); // Store user ID for editing
+    setEditIndex(user.id); 
     setEditDialogOpen(true);
   };
 
   const handleUpdateUser = async () => {
     try {
-        const updatedUser = { name, email, password, phone, role };
-        const response = await axios.post(`http://127.0.0.1:5000/users/${editIndex}`, updatedUser, axiosConfig); // Replace with your API endpoint
-        setUsers([...users, response.data]); // Add user to state
+        const updatedUser = { name, email, phone, role };
+        const response = await axios.patch(`http://127.0.0.1:5000/users/${editIndex}`, updatedUser, axiosConfig); // Replace with your API endpoint
         fetchUsers();
         setEditDialogOpen(false);
         toast.success('User updated successfully!');
@@ -184,8 +201,8 @@ const AddUserPage = () => {
           clearFields();
         }
       } catch (error) {
-        if (error.response && error.response.data) {
-          toast.error(error.response.data.message || 'Failed to update user');
+        if (error.response.data.error.statusCode === 409){
+          toast.error('Email is already taken');
         } else {
           toast.error('Failed to update user');
         }
@@ -194,73 +211,90 @@ const AddUserPage = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <ToastContainer/>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h4" sx={{ backgroundColor: '#1976d2', color: 'white', p: 2, textAlign: 'center', borderRadius: 2 }}>
-          Add User Profile
-        </Typography>
-        <form>
-          <TextField
-            label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            fullWidth
-            margin="normal"
-            error={!!errors.name}
-            helperText={errors.name}
-          />
-          <TextField
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            fullWidth
-            margin="normal"
-            error={!!errors.email}
-            helperText={errors.email}
-          />
-          <TextField
-            label="Phone" // New phone field
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            fullWidth
-            margin="normal"
-            error={!!errors.phone}
-            helperText={errors.phone}
-          />
-          <TextField
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            margin="normal"
-            type="password"
-            error={!!errors.password}
-            helperText={errors.password}
-          />
-          <FormControl fullWidth margin="normal" error={!!errors.role}>
-            <InputLabel>Role</InputLabel>
-            <Select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              label="Role"
-            >
-              <MenuItem value="Admin">Admin</MenuItem>
-              <MenuItem value="Supervisor">Supervisor</MenuItem>
-              <MenuItem value="Recruitment">Recruitment</MenuItem>
-              <MenuItem value="Interviewer">Interviewer</MenuItem>
-            </Select>
-          </FormControl>
-          {errors.role && <p style={{ color: 'red' }}>{errors.role}</p>}
-          <Button variant="contained" color="primary" onClick={handleAddUser} sx={{ mt: 2 }}>
-            Add User
-          </Button>
-        </form>
+      <ToastContainer />
+      
+      <Paper elevation={3} sx={{ p: 3, mt: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1976d2', color: 'white', borderRadius: 2 }}>
+          <Typography variant="h4" sx={{ p: 2, textAlign: 'center', width: '100%' }}>
+            Create New User
+          </Typography>
+          <IconButton onClick={() => setAddUserExpanded(!addUserExpanded)}>
+            {addUserExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Box>
+        {addUserExpanded && (
+          <form>
+            <TextField
+              label="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              fullWidth
+              margin="normal"
+              error={!!errors.name}
+              helperText={errors.name}
+            />
+            <TextField
+              label="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+              margin="normal"
+              error={!!errors.email}
+              helperText={errors.email}
+            />
+            <TextField
+              label="Phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              fullWidth
+              margin="normal"
+              error={!!errors.phone}
+              helperText={errors.phone}
+            />
+            <TextField
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              type="password"
+              error={!!errors.password}
+              helperText={errors.password}
+            />
+            <FormControl fullWidth margin="normal" error={!!errors.role}>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                label="Role"
+              >
+                <MenuItem value="Admin">Admin</MenuItem>
+                <MenuItem value="Supervisor">Supervisor</MenuItem>
+                <MenuItem value="Recruitment">Recruitment</MenuItem>
+                <MenuItem value="Interviewer">Interviewer</MenuItem>
+              </Select>
+            </FormControl>
+            {errors.role && <p style={{ color: 'red' }}>{errors.role}</p>}
+            <Button variant="contained" color="primary" onClick={handleAddUser} sx={{ mt: 2 }}>
+              Create User
+            </Button>
+          </form>
+        )}
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, mt: 4 }}>
         <Typography variant="h4" sx={{ backgroundColor: '#1976d2', color: 'white', p: 2, textAlign: 'center', borderRadius: 2 }}>
-          User Profile List
+          Manage Users
         </Typography>
+        
+        <TextField
+          label="Search Users"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          fullWidth
+          margin="normal"
+        />
+        
         <FormControl fullWidth sx={{ mt: 4 }}>
           <InputLabel>Filter by Role</InputLabel>
           <Select
@@ -295,12 +329,21 @@ const AddUserPage = () => {
                   <TableCell>{user.phone}</TableCell>
                   <TableCell>{user.role}</TableCell>
                   <TableCell>
-                    <IconButton onClick={() => handleEditUser(index)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteUser(user.id)}>
-                      <DeleteIcon />
-                    </IconButton>
+                    <Tooltip title="Edit User">
+                      <IconButton onClick={() => handleEditUser(index)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete User">
+                      <IconButton onClick={() => handleDeleteUser(user.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Change Password">
+                      <IconButton onClick={() => handleChangePassword(user.id)}>
+                        <LockIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -309,20 +352,34 @@ const AddUserPage = () => {
         </TableContainer>
       </Paper>
 
+      {/* Dialogs for edit user and other actions remain unchanged */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>Add Interviewer Details</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth margin="normal">
+        <FormControl fullWidth margin="normal">
             <InputLabel>Stage Category</InputLabel>
             <Select
+              multiple
               value={stageCategory}
-              onChange={(e) => setStageCategory(e.target.value)}
-              label="Stage Category"
+              onChange={(e) => {
+                const { value } = e.target;
+                if (value.includes('L2')) {
+                  setStageCategory(['L1', 'L2']); // Select both L1 and L2
+                } else {
+                  setStageCategory(value); // Select only L1
+                }
+              }}
+              input={<OutlinedInput label="Stage Category" />}
+              renderValue={(selected) => selected.join(', ')}
             >
-              <MenuItem value="L1">L1</MenuItem>
-              <MenuItem value="L2">L2</MenuItem>
-              <MenuItem value="L3">L3</MenuItem>
-              <MenuItem value="HR">HR</MenuItem>
+              <MenuItem value="L1">
+                <Checkbox checked={stageCategory.includes('L1')} />
+                L1
+              </MenuItem>
+              <MenuItem value="L2">
+                <Checkbox checked={stageCategory.includes('L2')} />
+                L2
+              </MenuItem>
             </Select>
           </FormControl>
           <FormControl fullWidth margin="normal">
@@ -349,7 +406,7 @@ const AddUserPage = () => {
             >
               {skills.map((skill) => (
                 <MenuItem key={skill} value={skill}>
-                  <Checkbox checked={selectedSkills.indexOf(skill) > -1} />
+                  <Checkbox checked={Array.isArray(selectedSkills) && selectedSkills.indexOf(skill) > -1} />
                   <ListItemText primary={skill} />
                 </MenuItem>
               ))}
@@ -385,14 +442,6 @@ const AddUserPage = () => {
             onChange={(e) => setPhone(e.target.value)}
             fullWidth
             margin="normal"
-          />
-          <TextField
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            margin="normal"
-            type="password"
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Role</InputLabel>
