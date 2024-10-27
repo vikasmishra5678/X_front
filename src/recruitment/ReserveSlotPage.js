@@ -1,180 +1,198 @@
 import React, { useState, useEffect } from 'react';
-import './ReserveSlotPage.css';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
+import axios from 'axios';
 
 const ReserveSlotPage = () => {
+  const [allCandidates, setAllCandidates] = useState([]);
   const [candidates, setCandidates] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [interviewers, setInterviewers] = useState([]);
+  const [selectedInterviewer, setSelectedInterviewer] = useState('');
+  const [panelDates, setPanelDates] = useState([]);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [panelTimes, setPanelTimes] = useState([]);
+  const [selectedTime, setSelectedTime] = useState('');
 
-  useEffect(() => {
-    // Fetch candidates from the server or API
-    // For demonstration, using static data
-    setCandidates([
-      {
-        dateTimeCreated: '2024-10-22 10:00 AM',
-        name: 'Amit Sharma',
-        email: 'amit.sharma@example.com',
-        totalExperience: '5 years',
-        relevantExperience: '3 years',
-        skillset: ['SAP Basis', 'SAP ABAP'],
-        l1Status: 'Scheduled',
-        l1Interviewer: 'Ravi Kumar',
-        l1Date: '2024-10-23',
-        l1Time: '10:00 AM',
-        l1Feedback: 'Pass',
-      },
-      {
-        dateTimeCreated: '2024-10-23 11:00 AM',
-        name: 'Priya Singh',
-        email: 'priya.singh@example.com',
-        totalExperience: '4 years',
-        relevantExperience: '2 years',
-        skillset: ['SAP FICO', 'SAP MM'],
-        l1Status: 'Pending',
-        l1Interviewer: 'Anjali Mehta',
-        l1Date: '2024-10-24',
-        l1Time: '11:00 AM',
-        l1Feedback: 'No-Show',
-      },
-      {
-        dateTimeCreated: '2024-10-24 09:30 AM',
-        name: 'Rahul Verma',
-        email: 'rahul.verma@example.com',
-        totalExperience: '6 years',
-        relevantExperience: '4 years',
-        skillset: ['SAP HANA', 'SAP BW'],
-        l1Status: 'Completed',
-        l1Interviewer: 'Suresh Patel',
-        l1Date: '2024-10-25',
-        l1Time: '09:30 AM',
-        l1Feedback: 'Selected',
-      },
-      {
-        dateTimeCreated: '2024-10-24 01:00 PM',
-        name: 'Neha Gupta',
-        email: 'neha.gupta@example.com',
-        totalExperience: '3 years',
-        relevantExperience: '2 years',
-        skillset: ['SAP SD', 'SAP CRM'],
-        l1Status: 'Scheduled',
-        l1Interviewer: 'Meena Rao',
-        l1Date: '2024-10-26',
-        l1Time: '01:00 PM',
-        l1Feedback: 'Pending',
-      },
-      {
-        dateTimeCreated: '2024-10-25 08:00 AM',
-        name: 'Vikram Singh',
-        email: 'vikram.singh@example.com',
-        totalExperience: '7 years',
-        relevantExperience: '5 years',
-        skillset: ['SAP PP', 'SAP QM'],
-        l1Status: 'Pending',
-        l1Interviewer: 'Anita Desai',
-        l1Date: '2024-10-27',
-        l1Time: '08:00 AM',
-        l1Feedback: 'Pending',
-      },
-    ]);
-  }, []);
+  const token = localStorage.getItem('token');
 
-  const handleInputChange = (index, field, value) => {
-    const updatedCandidates = [...candidates];
-    updatedCandidates[index][field] = value;
-    setCandidates(updatedCandidates);
+  const axiosConfig = {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
   };
 
-  const getRowClass = (status) => {
-    switch (status) {
-      case 'Scheduled':
-        return 'scheduled-row';
-      case 'Pending':
-        return 'pending-row';
-      case 'Completed':
-        return 'completed-row';
-      default:
-        return '';
+  // Fetch all candidates and filter by "waiting" status
+  const fetchCandidates = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:5000/candidates', axiosConfig);
+      const waitingCandidates = response.data.filter(candidate => candidate.candidate_status === 'waiting');
+      setAllCandidates(response.data);
+      setCandidates(waitingCandidates);
+    } catch (error) {
+      console.error('Error fetching candidates:', error);
+    }
+  };
+
+  // Fetch all users and filter by role "Interviewer"
+  const fetchInterviewers = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:5000/users', axiosConfig);
+      const interviewerUsers = response.data.filter(user => user.role === 'Interviewer');
+      setAllUsers(response.data);
+      setInterviewers(interviewerUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidates();
+    fetchInterviewers();
+    console.log(candidates)
+    console.log(interviewers)
+  }, []);
+
+  // Fetch panel ID based on selected interviewer
+  const handleInterviewerChange = async (userId) => {
+    setSelectedInterviewer(userId);
+    setSelectedDate('');
+    setSelectedTime('');
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/panel?userId=${userId}`, axiosConfig);
+      const panelId = response.data?.[0]?.id;
+
+      if (panelId) {
+        fetchPanelSlots(panelId);
+      }
+    } catch (error) {
+      console.error('Error fetching panel ID:', error);
+    }
+  };
+
+  // Fetch available dates and times for selected panelId, grouped by date
+  const fetchPanelSlots = async (panelId) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/panelslots?panelId=${panelId}`, axiosConfig);
+      const groupedSlots = response.data.reduce((acc, slot) => {
+        const date = slot.date;
+        acc[date] = acc[date] ? [...acc[date], slot] : [slot];
+        return acc;
+      }, {});
+      
+      const dates = Object.keys(groupedSlots).sort();
+      setPanelDates(dates);
+      setPanelTimes(groupedSlots);
+    } catch (error) {
+      console.error('Error fetching panel slots:', error);
+    }
+  };
+
+  // Handle scheduling
+  const handleSubmit = async (candidateId) => {
+    const candidateData = {
+      candidate_status: 'active',
+      current_stage: 'L1',
+      l1_status: 'Scheduled',
+      l1_panel: selectedInterviewer,
+      l1_date: selectedDate,
+      l1_time: selectedTime,
+    };
+
+    try {
+      const response = await axios.put(`http://127.0.0.1:5000/candidates/${candidateId}/status`, candidateData, axiosConfig);
+
+      if (response.status === 200) {
+        alert('Candidate scheduled successfully');
+        fetchCandidates();  // Refresh the candidate list to show only waiting candidates
+      } else {
+        alert('Failed to schedule candidate');
+      }
+    } catch (error) {
+      console.error('Error scheduling candidate:', error);
     }
   };
 
   return (
     <div className="container">
-      <h1 className="title">Candidate List</h1>
-      <div className="table-container">
-        <table className="custom-table">
-          <thead>
-            <tr>
-              <th>Date Time Created</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Total Experience</th>
-              <th>Relevant Experience</th>
-              <th>Skillset</th>
-              <th>L1 Status</th>
-              <th>L1 Interviewer</th>
-              <th>L1 Date</th>
-              <th>L1 Time</th>
-              <th>L1 Feedback</th>
-            </tr>
-          </thead>
-          <tbody>
+      <h1>Schedule Interviews for Waiting Candidates</h1>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Total Experience</TableCell>
+              <TableCell>Relevant Experience</TableCell>
+              <TableCell>Skillset</TableCell>
+              <TableCell>Interviewer</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Time</TableCell>
+              <TableCell>Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {candidates.map((candidate, index) => (
-              <tr key={index} className={getRowClass(candidate.l1Status)}>
-                <td>{candidate.dateTimeCreated}</td>
-                <td>{candidate.name}</td>
-                <td>{candidate.email}</td>
-                <td>{candidate.totalExperience}</td>
-                <td>{candidate.relevantExperience}</td>
-                <td>{candidate.skillset.join(', ')}</td>
-                <td>
-                  <select
-                    value={candidate.l1Status}
-                    onChange={(e) => handleInputChange(index, 'l1Status', e.target.value)}
-                    className="status-select"
-                  >
-                    <option value="Scheduled" className="status-scheduled">Scheduled</option>
-                    <option value="Pending" className="status-pending">Pending</option>
-                    <option value="Completed" className="status-completed">Completed</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    value={candidate.l1Interviewer}
-                    onChange={(e) => handleInputChange(index, 'l1Interviewer', e.target.value)}
-                    className="input-field"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="date"
-                    value={candidate.l1Date}
-                    onChange={(e) => handleInputChange(index, 'l1Date', e.target.value)}
-                    className="input-field"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    value={candidate.l1Time}
-                    onChange={(e) => handleInputChange(index, 'l1Time', e.target.value)}
-                    className="input-field"
-                  />
-                </td>
-                <td>
-                  <select
-                    value={candidate.l1Feedback}
-                    onChange={(e) => handleInputChange(index, 'l1Feedback', e.target.value)}
-                    className="feedback-select"
-                  >
-                    <option value="Selected" className="feedback-pass">Selected</option>
-                    <option value="Rejected" className="feedback-fail">Rejected</option>
-                    <option value="No-Show" className="feedback-no-show">No-Show</option>
-                  </select>
-                </td>
-              </tr>
+              <TableRow key={index}>
+                <TableCell>{candidate.name}</TableCell>
+                <TableCell>{candidate.email}</TableCell>
+                <TableCell>{candidate.totalExperience}</TableCell>
+                <TableCell>{candidate.relevantExperience}</TableCell>
+                <TableCell>{candidate.domain.join(', ')}</TableCell>
+                <TableCell>
+                  <FormControl fullWidth>
+                    <InputLabel>Interviewer</InputLabel>
+                    <Select
+                      value={selectedInterviewer}
+                      onChange={(e) => handleInterviewerChange(e.target.value)}
+                    >
+                      {interviewers.map((interviewer) => (
+                        <MenuItem key={interviewer.id} value={interviewer.id}>
+                          {interviewer.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </TableCell>
+                <TableCell>
+                  <FormControl fullWidth>
+                    <InputLabel>Date</InputLabel>
+                    <Select
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                    >
+                      {panelDates.map((date) => (
+                        <MenuItem key={date} value={date}>
+                          {date}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </TableCell>
+                <TableCell>
+                  <FormControl fullWidth>
+                    <InputLabel>Time</InputLabel>
+                    <Select
+                      value={selectedTime}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                    >
+                      {panelTimes[selectedDate]?.map((slot) => (
+                        <MenuItem key={slot.time} value={slot.time}>
+                          {slot.time}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </TableCell>
+                <TableCell>
+                  <Button variant="contained" color="primary" onClick={() => handleSubmit(candidate.id)}>
+                    Schedule
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
     </div>
   );
 };
