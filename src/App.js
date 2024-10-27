@@ -1,35 +1,32 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
 import MainLayout from './MainLayout';
 import LoginPage from './LoginPage';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
-  const [userRole, setUserRole] = useState('');
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]); // Initialize users as an empty array
 
   const handleLogin = (username, role) => {
-    setUsername(username);
-    setUserRole(role);
-    setIsLoggedIn(true);
+    setUser({ username, role });
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUsername('');
-    setUserRole('');
-    localStorage.removeItem('token'); // Remove the token on logout
+    setUser(null);
+    localStorage.removeItem('token');
   };
 
   return (
-    <div>
-      {isLoggedIn ? (
-        <MainLayout onLogout={handleLogout} username={username} userRole={userRole} />
-      ) : (
-        <LoginPage onLogin={handleLogin} />
-      )}
-    </div>
+    <Router>
+      <div>
+        {user ? (
+          <MainLayout onLogout={handleLogout} user={user} users={users} setUsers={setUsers} />
+        ) : (
+          <LoginPage onLogin={handleLogin} />
+        )}
+      </div>
+    </Router>
   );
 }
 
 export default App;
-

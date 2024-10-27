@@ -41,7 +41,7 @@ const LoginPage = ({ onLogin }) => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper elevation={6} sx={{ p: 4, mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Paper elevation={6} sx={{ p: 4, mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 2 }}>
         <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
           <LockOutlinedIcon />
         </Avatar>
@@ -56,6 +56,8 @@ const LoginPage = ({ onLogin }) => {
             label="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            autoFocus
           />
           <TextField
             margin="normal"
@@ -65,6 +67,7 @@ const LoginPage = ({ onLogin }) => {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
           />
           <Button
             type="submit"

@@ -6,7 +6,7 @@ const ConfirmationDialog = ({ open, onClose, onConfirm, selectedDate, selectedTi
     <DialogTitle>Confirm Booking</DialogTitle>
     <DialogContent>
       <DialogContentText>
-        Are you sure you want to book the following slots on {selectedDate.toDateString()}?
+      Are you sure you want to book the following slots on {selectedDate ? selectedDate.toDateString() : 'an unspecified date'}?
         <ul>
           {selectedTimes.map((time, index) => (
             <li key={index}>{time}</li>
