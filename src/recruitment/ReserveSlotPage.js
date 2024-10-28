@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, MenuItem, Select, FormControl } from '@mui/material';
 import axios from 'axios';
 
 const ReserveSlotPage = () => {
@@ -7,11 +7,9 @@ const ReserveSlotPage = () => {
   const [candidates, setCandidates] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [interviewers, setInterviewers] = useState([]);
-  const [selectedInterviewer, setSelectedInterviewer] = useState('');
-  const [panelDates, setPanelDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [panelTimes, setPanelTimes] = useState([]);
-  const [selectedTime, setSelectedTime] = useState('');
+  const [panelDates, setPanelDates] = useState({});
+  const [panelTimes, setPanelTimes] = useState({});
+  const [panelIds, setPanelIds] = useState({});
 
   const token = localStorage.getItem('token');
 
@@ -48,21 +46,21 @@ const ReserveSlotPage = () => {
   useEffect(() => {
     fetchCandidates();
     fetchInterviewers();
-    console.log(candidates)
-    console.log(interviewers)
   }, []);
 
   // Fetch panel ID based on selected interviewer
-  const handleInterviewerChange = async (userId) => {
-    setSelectedInterviewer(userId);
-    setSelectedDate('');
-    setSelectedTime('');
-    try {
-      const response = await axios.get(`http://127.0.0.1:5000/panel?userId=${userId}`, axiosConfig);
-      const panelId = response.data?.[0]?.id;
+  const handleInterviewerChange = async (userId, candidateId) => {
+    const updatedCandidates = candidates.map(candidate => 
+      candidate.id === candidateId ? { ...candidate, selectedInterviewer: userId, selectedDate: '', selectedTime: '' } : candidate
+    );
+    setCandidates(updatedCandidates);
 
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/users/${userId}/panel`, axiosConfig);
+      const panelId = response.data.id;
       if (panelId) {
-        fetchPanelSlots(panelId);
+        setPanelIds(prevState => ({ ...prevState, [candidateId]: panelId }));
+        fetchPanelSlots(panelId, candidateId);
       }
     } catch (error) {
       console.error('Error fetching panel ID:', error);
@@ -70,18 +68,21 @@ const ReserveSlotPage = () => {
   };
 
   // Fetch available dates and times for selected panelId, grouped by date
-  const fetchPanelSlots = async (panelId) => {
+  const fetchPanelSlots = async (panelId, candidateId) => {
     try {
-      const response = await axios.get(`http://127.0.0.1:5000/panelslots?panelId=${panelId}`, axiosConfig);
+      const response = await axios.get(`http://127.0.0.1:5000/panels/${panelId}/panel-slots`, axiosConfig);
       const groupedSlots = response.data.reduce((acc, slot) => {
-        const date = slot.date;
-        acc[date] = acc[date] ? [...acc[date], slot] : [slot];
+        if (slot.status === 'available') {
+          const date = slot.date;
+          acc[date] = acc[date] ? [...acc[date], slot] : [slot];
+        }
         return acc;
       }, {});
-      
+
       const dates = Object.keys(groupedSlots).sort();
-      setPanelDates(dates);
-      setPanelTimes(groupedSlots);
+      setPanelDates(prevState => ({ ...prevState, [candidateId]: dates }));
+      setPanelTimes(prevState => ({ ...prevState, [candidateId]: groupedSlots }));
+      
     } catch (error) {
       console.error('Error fetching panel slots:', error);
     }
@@ -89,28 +90,58 @@ const ReserveSlotPage = () => {
 
   // Handle scheduling
   const handleSubmit = async (candidateId) => {
+    const candidate = candidates.find(candidate => candidate.id === candidateId);
     const candidateData = {
-      candidate_status: 'active',
+      candidate_status: "Active",
+    };
+    const candidateStatusData = {
       current_stage: 'L1',
       l1_status: 'Scheduled',
-      l1_panel: selectedInterviewer,
-      l1_date: selectedDate,
-      l1_time: selectedTime,
+      l1_panel: candidate.selectedInterviewer,
+      l1_date: candidate.selectedDate,
+      l1_time: candidate.selectedTime,
     };
 
     try {
-      const response = await axios.put(`http://127.0.0.1:5000/candidates/${candidateId}/status`, candidateData, axiosConfig);
-
+      const responseCandidate = await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}`, candidateData, axiosConfig);
+      const response = await axios.post(`http://127.0.0.1:5000/candidates/${candidateId}/candidate-status`, candidateStatusData, axiosConfig);
+      
       if (response.status === 200) {
+        const panelId = panelIds[candidateId];
+        const slotResponse = await axios.get(`http://127.0.0.1:5000/panels/${panelId}/panel-slots`, {
+        params: {
+          filter: JSON.stringify({
+            where: {
+              and: [
+                { date: candidate.selectedDate },
+                { time: candidate.selectedTime }
+              ]
+            }
+          })
+        },
+        ...axiosConfig
+      });
+      console.log(slotResponse)
+      const slotId = slotResponse.data[0]?.id;
+      if (slotId) {
+        // Update panel slot status to "booked"
+        const panelSlotData = {
+          status: 'booked',
+        };
+        await axios.patch(`http://127.0.0.1:5000/panel-slots/${slotId}`, panelSlotData, axiosConfig);
+
         alert('Candidate scheduled successfully');
         fetchCandidates();  // Refresh the candidate list to show only waiting candidates
       } else {
-        alert('Failed to schedule candidate');
+        alert('Failed to find the specific slot');
       }
-    } catch (error) {
-      console.error('Error scheduling candidate:', error);
+    } else {
+      alert('Failed to schedule candidate');
     }
-  };
+  } catch (error) {
+    console.error('Error scheduling candidate:', error);
+  }
+};
 
   return (
     <div className="container">
@@ -140,11 +171,12 @@ const ReserveSlotPage = () => {
                 <TableCell>{candidate.domain.join(', ')}</TableCell>
                 <TableCell>
                   <FormControl fullWidth>
-                    <InputLabel>Interviewer</InputLabel>
                     <Select
-                      value={selectedInterviewer}
-                      onChange={(e) => handleInterviewerChange(e.target.value)}
+                      value={candidate.selectedInterviewer || ''}
+                      onChange={(e) => handleInterviewerChange(e.target.value, candidate.id)}
+                      displayEmpty
                     >
+                      <MenuItem value="">Select Interviewer</MenuItem>
                       {interviewers.map((interviewer) => (
                         <MenuItem key={interviewer.id} value={interviewer.id}>
                           {interviewer.name}
@@ -155,12 +187,18 @@ const ReserveSlotPage = () => {
                 </TableCell>
                 <TableCell>
                   <FormControl fullWidth>
-                    <InputLabel>Date</InputLabel>
                     <Select
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
+                      value={candidate.selectedDate || ''}
+                      onChange={(e) => {
+                        const updatedCandidates = candidates.map(c => 
+                          c.id === candidate.id ? { ...c, selectedDate: e.target.value, selectedTime: '' } : c
+                        );
+                        setCandidates(updatedCandidates);
+                      }}
+                      displayEmpty
                     >
-                      {panelDates.map((date) => (
+                      <MenuItem value="">Select Date</MenuItem>
+                      {panelDates[candidate.id]?.map((date) => (
                         <MenuItem key={date} value={date}>
                           {date}
                         </MenuItem>
@@ -170,12 +208,18 @@ const ReserveSlotPage = () => {
                 </TableCell>
                 <TableCell>
                   <FormControl fullWidth>
-                    <InputLabel>Time</InputLabel>
                     <Select
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
+                      value={candidate.selectedTime || ''}
+                      onChange={(e) => {
+                        const updatedCandidates = candidates.map(c => 
+                          c.id === candidate.id ? { ...c, selectedTime: e.target.value } : c
+                        );
+                        setCandidates(updatedCandidates);
+                      }}
+                      displayEmpty
                     >
-                      {panelTimes[selectedDate]?.map((slot) => (
+                      <MenuItem value="">Select Time</MenuItem>
+                      {panelTimes[candidate.id]?.[candidate.selectedDate]?.map((slot) => (
                         <MenuItem key={slot.time} value={slot.time}>
                           {slot.time}
                         </MenuItem>
