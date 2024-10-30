@@ -1,54 +1,174 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, MenuItem, Select, FormControl, Tabs, Tab } from '@mui/material';
+import axios from 'axios';
 
 const BookedSlotPage = () => {
-  const [bookedSlots, setBookedSlots] = useState([]);
+    const [candidates, setCandidates] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
+    const [candidateStatuses, setCandidateStatuses] = useState([]);
+    const [feedbacks, setFeedbacks] = useState({});
+    const [tabValue, setTabValue] = useState(0);
+    const token = localStorage.getItem('token');
+    const axiosConfig = {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    };
 
-  const fetchBookedSlots = () => {
-    // Fetch booked slots from the server or API
-    // For demonstration, using static data
-    const slots = [
-      { panel: 'Ravi Kumar', candidate: 'Amit Sharma', date: '2024-10-22', time: '10:00 AM' },
-      { panel: 'Anjali Mehta', candidate: 'Priya Singh', date: '2024-10-23', time: '11:00 AM' },
-      { panel: 'Suresh Patil', candidate: 'Rahul Verma', date: '2024-10-24', time: '02:00 PM' },
-      { panel: 'Ravi Kumar', candidate: 'Neha Gupta', date: '2024-10-25', time: '10:00 AM' },
-      { panel: 'Anjali Mehta', candidate: 'Vikram Rao', date: '2024-10-26', time: '11:00 AM' },
-    ];
-    setBookedSlots(slots);
-  };
+    // Fetch candidates
+    const fetchCandidates = async () => {
+        try {
+            const response = await axios.get('http://127.0.0.1:5000/candidates', axiosConfig);
+            setCandidates(response.data);
+        } catch (error) {
+            console.error('Error fetching candidates:', error);
+        }
+    };
 
-  return (
-    <Box sx={{ padding: '20px' }}>
-      <Typography variant="h4" gutterBottom>
-        Booked Slots Overview
-      </Typography>
-      <Button variant="contained" onClick={fetchBookedSlots} sx={{ marginBottom: '20px' }}>
-        Show Booked Slots
-      </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Panel</TableCell>
-              <TableCell>Candidate</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Time</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {bookedSlots.map((slot, index) => (
-              <TableRow key={index}>
-                <TableCell>{slot.panel}</TableCell>
-                <TableCell>{slot.candidate}</TableCell>
-                <TableCell>{slot.date}</TableCell>
-                <TableCell>{slot.time}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
-  );
+    // Fetch all candidate statuses
+    const fetchCandidateStatuses = async () => {
+        try {
+            const response = await axios.get('http://127.0.0.1:5000/candidate-statuses', axiosConfig);
+            setCandidateStatuses(response.data);
+        } catch (error) {
+            console.error('Error fetching candidate statuses:', error);
+        }
+    };
+
+    // Fetch all users
+    const fetchUsers = async () => {
+        try {
+            const response = await axios.get('http://127.0.0.1:5000/users', axiosConfig);
+            setAllUsers(response.data);
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchCandidates();
+        fetchCandidateStatuses();
+        fetchUsers();
+    }, []);
+
+    // Handle feedback change
+    const handleFeedbackChange = (candidateId, feedback) => {
+        setFeedbacks(prevState => ({ ...prevState, [candidateId]: feedback }));
+    };
+
+    // Handle feedback submission
+    const handleSubmit = async (candidateId) => {
+        const feedback = feedbacks[candidateId];
+        if (!feedback) {
+            alert('Please select feedback before submitting.');
+            return;
+        }
+        const statusUpdate = {};
+        if (tabValue === 0) { // L1 Feedback
+            statusUpdate.l1_feedback = feedback;
+            if (feedback === 'selected') {
+                statusUpdate.current_stage = 'L2';
+                statusUpdate.l1_status = 'selected';
+                statusUpdate.l2_status = 'waiting';
+            } else if (feedback === 'rejected') {
+                statusUpdate.l1_status = 'rejected';
+                await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}`, { candidate_status: 'rejected' }, axiosConfig);
+            } else if (feedback === 'no show') {
+                statusUpdate.l1_status = 'waiting';
+            }
+        } else if (tabValue === 1) { // L2 Feedback
+            statusUpdate.l2_feedback = feedback;
+            if (feedback === 'selected') {
+                statusUpdate.current_stage = 'selected';
+                statusUpdate.l2_status = 'selected';
+                await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}`, { candidate_status: 'selected' }, axiosConfig);
+            } else if (feedback === 'rejected') {
+                statusUpdate.l2_status = 'rejected';
+                await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}`, { candidate_status: 'rejected' }, axiosConfig);
+            } else if (feedback === 'no show') {
+                statusUpdate.l2_feedback = 'no show';
+                statusUpdate.l2_status = 'waiting';
+            }
+        }
+
+        try {
+            await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}/candidate-status`, statusUpdate, axiosConfig);
+            alert('Feedback updated successfully');
+            fetchCandidateStatuses(); // Refresh the candidate statuses
+        } catch (error) {
+            console.error('Error updating feedback:', error);
+        }
+    };
+
+    return (
+        <div className="container">
+            <h1>Scheduled Interviews</h1>
+            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+                <Tab label="L1 Candidates" />
+                <Tab label="L2 Candidates" />
+            </Tabs>
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Candidate Name</TableCell>
+                            <TableCell>Candidate Email</TableCell>
+                            <TableCell>Candidate Phone</TableCell>
+                            <TableCell>Interviewer Name</TableCell>
+                            <TableCell>Interviewer Email</TableCell>
+                            <TableCell>Interviewer Phone</TableCell>
+                            <TableCell>Date</TableCell>
+                            <TableCell>Time</TableCell>
+                            <TableCell>{tabValue === 0 ? "L1 Feedback" : "L2 Feedback"}</TableCell>
+                            <TableCell>Action</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {candidates.map((candidate, index) => {
+                            const status = candidateStatuses.find(status => status.candidateId === candidate.id);
+                            if ((tabValue === 0 && status?.l1_status !== 'Scheduled') || (tabValue === 1 && status?.l2_status !== 'Scheduled')) return null;
+                            const interviewer = allUsers.find(user => user.id === (tabValue === 0 ? status.l1_panel : status.l2_panel));
+                            return (
+                                <TableRow key={index}>
+                                    <TableCell>{candidate.name}</TableCell>
+                                    <TableCell>{candidate.email}</TableCell>
+                                    <TableCell>{candidate.phone}</TableCell>
+                                    <TableCell>{interviewer?.name}</TableCell>
+                                    <TableCell>{interviewer?.email}</TableCell>
+                                    <TableCell>{interviewer?.phone}</TableCell>
+                                    <TableCell>{tabValue === 0 ? status.l1_date : status.l2_date}</TableCell>
+                                    <TableCell>{tabValue === 0 ? status.l1_time : status.l2_time}</TableCell>
+                                    <TableCell>
+                                        <FormControl fullWidth>
+                                            <Select
+                                                value={feedbacks[candidate.id] || ''}
+                                                onChange={(e) => handleFeedbackChange(candidate.id, e.target.value)}
+                                                displayEmpty
+                                            >
+                                                <MenuItem value="">Select Feedback</MenuItem>
+                                                <MenuItem value="selected">Selected</MenuItem>
+                                                <MenuItem value="rejected">Rejected</MenuItem>
+                                                <MenuItem value="no show">No Show</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            onClick={() => handleSubmit(candidate.id)}
+                                        >
+                                            Submit
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+        </div>
+    );
 };
 
 export default BookedSlotPage;

@@ -15,7 +15,7 @@ import OverviewRecruitmentPage from './recruitment/OverviewRecruitmentPage';
 import ReserveSlotPage from './recruitment/ReserveSlotPage';
 import FreeSlotPage from './recruitment/FreeSlotPage';
 import BookedSlotPage from './recruitment/BookedSlotPage';
-import RequestSlotPage from './recruitment/RequestSlotPage';
+import SelectedCandidatesPage from './recruitment/SelectedCandidatesPage';
 
 const drawerWidth = 240;
 
@@ -177,12 +177,12 @@ const MainLayout = ({ onLogout, user, users, setUsers }) => {
                 <Typography variant="body1">Booked Slot</Typography>
               </ListItem>
             </Tooltip>
-            <Tooltip title="Request Slot" placement="right">
-              <ListItem button component={Link} to="/request-slot">
+            <Tooltip title="Selected Candidates" placement="right">
+              <ListItem button component={Link} to="/selected-candidates">
                 <IconButton>
                   <Event />
                 </IconButton>
-                <Typography variant="body1">Request Slot</Typography>
+                <Typography variant="body1">Selected Candidates</Typography>
               </ListItem>
             </Tooltip>
           </>
@@ -249,7 +249,7 @@ const MainLayout = ({ onLogout, user, users, setUsers }) => {
                 <Route path="/reserve-slot" element={<ReserveSlotPage />} />
                 <Route path="/free-slot" element={<FreeSlotPage />} />
                 <Route path="/booked-slot" element={<BookedSlotPage />} />
-                <Route path="/request-slot" element={<RequestSlotPage />} />
+                <Route path="/selected-candidates" element={<SelectedCandidatesPage />} />
               </>
             )}
           </Routes>
