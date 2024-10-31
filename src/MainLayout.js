@@ -82,7 +82,7 @@ const MainLayout = ({ onLogout, user, users, setUsers }) => {
         {user.role === 'admin' && (
           <>
             <Tooltip title="Admin Overview" placement="right">
-              <ListItem button component={Link} to="/admin-overview">
+              <ListItem button component={Link} to="/overview">
                 <IconButton>
                   <Dashboard />
                 </IconButton>
@@ -226,12 +226,12 @@ const MainLayout = ({ onLogout, user, users, setUsers }) => {
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
           <Toolbar />
           <Routes>
-            <Route path="/" element={<Navigate to={user.role === 'admin' ? '/admin-overview' : user.role === 'interviewer' ? '/overview' : '/overview'} />} />
+            <Route path="/" element={<Navigate to='/overview' />} />
             <Route path="/account-info" element={<AccountInfoPage />} />
             {user.role === 'admin' && (
               <>
                 <Route path="/add-user" element={<AddUserPage users={users} setUsers={setUsers} />} />
-                <Route path="/admin-overview" element={<AdminOverviewPage users={users} setUsers={setUsers} />} />
+                <Route path="/overview" element={<AdminOverviewPage users={users} setUsers={setUsers} />} />
                 <Route path="/upload-profiles" element={<UploadProfilesPage />} />
                 <Route path="/download-reports" element={<DownloadReportsPage />} />
               </>
