@@ -9,7 +9,7 @@ import EmojiPeopleIcon from '@mui/icons-material/EmojiPeople';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-
+ 
 const notifications = [
   {
     id: 1,
@@ -19,9 +19,9 @@ const notifications = [
     link: 'https://ltimindtree.ripplehire.com/employee/employeedashboard'
   }
 ];
-
+ 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
+ 
 const data = {
   labels: ['January', 'February', 'March', 'April', 'May', 'June'],
   datasets: [
@@ -54,7 +54,7 @@ const data = {
     }
   ]
 };
-
+ 
 const OverviewPage = ({ username }) => {
   return (
     <Box sx={{ mt: 4, px: 2 }}>
@@ -180,5 +180,5 @@ const OverviewPage = ({ username }) => {
     </Box>
   );
 };
-
+ 
 export default OverviewPage;

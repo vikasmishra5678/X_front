@@ -1,104 +1,88 @@
-.custom-event {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #1976d2;
-    color: white;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    margin: auto;
-    font-size: 14px;
-    font-weight: bold;
-  }
-  
-  .rbc-time-slot {
-    min-height: 30px; /* Decrease the height of each time slot */
-  }
-  
-  .rbc-time-content {
-    min-width: auto; /* Remove the fixed minimum width */
-    overflow-x: hidden; /* Hide horizontal scroll */
-  }
-  
-  .rbc-time-content::-webkit-scrollbar {
-    width: 16px;
-  }
-  
-  .rbc-time-content::-webkit-scrollbar-thumb {
-    background-color: #1976d2;
-    border-radius: 10px;
-    border: 3px solid #f5f5f5;
-  }
-  
-  .rbc-time-content::-webkit-scrollbar-track {
-    background-color: #f5f5f5;
-  }
-  
-  .rbc-event {
-    font-size: 14px; /* Adjust the font size of event text */
-    padding: 3px; /* Adjust padding to event text */
-  }
-  
-  /* Custom event style for month view */
-  .rbc-month-view .rbc-event {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #1976d2;
-    color: white;
-    border-radius: 50%; /* Circular shape for month view */
-    width: 30px;
-    height: 30px;
-    margin: auto;
-    font-size: 14px;
-    font-weight: bold;
-  }
-  
-  /* Custom event style for week and day views */
-  .rbc-time-view .rbc-event, 
-  .rbc-day-slot .rbc-event {
-    background-color: #1976d2;
-    color: white;
-    border-radius: 4px; /* Slightly rounded corners for rectangular shape */
-    padding: 4px;
-    font-size: 14px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: auto; /* Ensure the height adjusts to content */
-    width: auto; /* Ensure the width adjusts to content */
-    margin: 2px; /* Add margin to create space between events */
-  }
-  
-  /* Highlight the entire cell of the current date in the month view */
-  .rbc-month-view .rbc-date-cell.rbc-now {
-    background-color: lightgreen;
-    border-radius: 4px; /* Optional: Add rounded corners */
-    color: black; /* Optional: Change text color for better contrast */
-  }
-  
-  /* Adjust the header in the week section */
-  .rbc-time-header-cell {
-    width: auto; /* Allow the width to adjust automatically */
-    padding: 8px; /* Add padding for better spacing */
-    text-align: center; /* Center align the text */
-    font-size: 14px; /* Adjust font size for better readability */
-    background-color: #f5f5f5; /* Optional: Add a background color for contrast */
-    border: 1px solid #ddd; /* Optional: Add a border for better separation */
-  }
-  
-  .rbc-time-header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center; /* Ensure the content is vertically centered */
-  }
-  
-  .rbc-time-header-content .rbc-row {
-    flex: 1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center; /* Ensure the content is vertically centered */
-  }
-  
+/* BookSlotsPage.css */
+/* Remove boxy borders */
+.rbc-calendar {
+  border: none;
+  border-radius: 8px;
+  background-color: transparent;
+  padding: 10px;
+ }
+ 
+ /* Month, day, and week views */
+ .rbc-month-view,
+ .rbc-time-view,
+ .rbc-agenda-view {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.05);
+ }
+ 
+ /* Event cells */
+ .rbc-event {
+  border: none;
+  border-radius: 8px;
+  background-color: #1976d2;
+  color: #ffffff;
+  font-size: 0.85rem;
+  padding: 5px;
+ }
+ 
+ /* Header styling */
+ .rbc-toolbar {
+  padding: 10px 20px;
+  background-color: transparent;
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Roboto', sans-serif;
+ }
+ 
+ .rbc-toolbar button {
+  background-color: #1976d2;
+  color: #fff;
+  border-radius: 5px;
+  padding: 6px 12px;
+ }
+ 
+ .rbc-toolbar button:hover {
+  background-color: #145ea8;
+ }
+ 
+ /* Day names */
+ .rbc-day-bg {
+  border: none;
+ }
+ 
+ .rbc-header {
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 8px 0;
+  border-bottom: 1px solid #ddd;
+ }
+ 
+ /* Today indicator */
+ .rbc-today {
+  background-color: rgba(25, 118, 210, 0.1);
+ }
+ 
+ /* Custom selected day highlight */
+ .highlight {
+  background-color: rgba(25, 118, 210, 0.2);
+  border-radius: 50%;
+ }
+ 
+ /* Custom event styling */
+ .custom-event {
+  color: white;
+  border-radius: 5px;
+  padding: 2px;
+  text-align: center;
+ }
+ 
+ /* Custom event colors */
+ .custom-event.green {
+  background-color: #4caf50;
+ }
+ 
+ .custom-event.yellow {
+  background-color: #ffeb3b;
+ }
+ 

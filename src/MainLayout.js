@@ -1,17 +1,44 @@
 import React, { useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, CssBaseline, Drawer, List, ListItem, IconButton, Tooltip, Avatar, Divider, Switch } from '@mui/material';
-import { Home, PersonAdd, CloudUpload, CloudDownload, Dashboard, Event, AccountCircle, ExitToApp, Menu, Brightness4, Brightness7 } from '@mui/icons-material';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  CssBaseline,
+  Drawer,
+  List,
+  ListItem,
+  IconButton,
+  Tooltip,
+  Avatar,
+  Divider,
+  ThemeProvider,
+  createTheme,
+  useMediaQuery,
+} from '@mui/material';
+import {
+  Dashboard,
+  PersonAdd,
+  CloudUpload,
+  CloudDownload,
+  Event,
+  AccountCircle,
+  ExitToApp,
+  Menu,
+  Brightness4,
+  Brightness7,
+} from '@mui/icons-material';
 import { Route, Routes, Link, Navigate } from 'react-router-dom';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AddUserPage from './AddUserPage';
 import AdminOverviewPage from './AdminOverviewPage';
 import OverviewPage from './OverviewPage';
+import OverviewRecruitmentPage from './recruitment/OverviewRecruitmentPage';
 import BookSlotsPage from './BookSlotsPage';
 import ViewSlotsPage from './ViewSlotsPage';
 import AccountInfoPage from './AccountInfoPage';
 import UploadProfilesPage from './UploadProfilesPage';
 import DownloadReportsPage from './DownloadReportsPage';
-import OverviewRecruitmentPage from './recruitment/OverviewRecruitmentPage';
 import ReserveSlotPage from './recruitment/ReserveSlotPage';
 import FreeSlotPage from './recruitment/FreeSlotPage';
 import BookedSlotPage from './recruitment/BookedSlotPage';
@@ -19,172 +46,149 @@ import SelectedCandidatesPage from './recruitment/SelectedCandidatesPage';
 
 const drawerWidth = 240;
 
-const MainLayout = ({ onLogout, user, users, setUsers }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+const MainLayout = ({ onLogout, user }) => {
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
-  const toggleDrawer = () => {
-    setDrawerOpen(!drawerOpen);
-  };
+  const toggleDrawer = () => setDrawerOpen((prev) => !prev);
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
-
-  const lightTheme = createTheme({
+  const theme = createTheme({
     palette: {
-      mode: 'light',
-      primary: {
-        main: '#1a237e',
-      },
-      background: {
-        default: '#e8eaf6',
-        paper: '#f5f5f5',
-      },
-      text: {
-        primary: '#000000',
-      },
+      mode: darkMode ? 'dark' : 'light',
+      primary: { main: darkMode ? '#003366' : '#00509e' },
+      secondary: { main: darkMode ? '#ffb74d' : '#ff9800' },
+      background: { default: darkMode ? '#121212' : '#f4f4f9' },
+      text: { primary: darkMode ? '#e0e0e0' : '#2e2e2e' },
     },
-  });
-
-  const darkTheme = createTheme({
-    palette: {
-      mode: 'dark',
-      primary: {
-        main: '#90caf9',
+    components: {
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            width: drawerWidth,
+            backgroundColor: darkMode ? '#1a1a1a' : '#e8eaf6',
+            color: darkMode ? '#ffffff' : '#2e2e2e',
+          },
+        },
       },
-      background: {
-        default: '#121212',
-        paper: '#1e1e1e',
-      },
-      text: {
-        primary: '#ffffff',
+      MuiAppBar: {
+        styleOverrides: {
+          colorPrimary: {
+            backgroundColor: darkMode ? '#003366' : '#00509e',
+          },
+        },
       },
     },
   });
 
   const drawerContent = (
-    <Box sx={{ width: drawerWidth }}>
-      <Toolbar>
-        <Avatar alt="App Logo" src="/path/to/logo.png" sx={{ margin: '0 auto', width: 56, height: 56 }} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
+      <Toolbar sx={{ justifyContent: 'center' }}>
+        <Avatar alt="App Logo" src="/path/to/logo.png" sx={{ width: 60, height: 60 }} />
       </Toolbar>
-      <Divider />
+      <Divider sx={{ my: 1 }} />
       <List>
-        {/* Common page for all users */}
-            <Tooltip title="Account Info" placement="right">
-              <ListItem button component={Link} to="/account-info">
-                <IconButton>
-                  <AccountCircle />
-                </IconButton>
-                <Typography variant="body1">Account Info</Typography>
-              </ListItem>
-            </Tooltip>
         {user.role === 'admin' && (
           <>
-            <Tooltip title="Admin Overview" placement="right">
-              <ListItem button component={Link} to="/overview">
-                <IconButton>
-                  <Dashboard />
-                </IconButton>
-                <Typography variant="body1">Admin Overview</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Add User" placement="right">
-              <ListItem button component={Link} to="/add-user">
-                <IconButton>
-                  <PersonAdd />
-                </IconButton>
-                <Typography variant="body1">Add User</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Upload Profiles" placement="right">
-              <ListItem button component={Link} to="/upload-profiles">
-                <IconButton>
-                  <CloudUpload />
-                </IconButton>
-                <Typography variant="body1">Upload Profiles</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Download Reports" placement="right">
-              <ListItem button component={Link} to="/download-reports">
-                <IconButton>
-                  <CloudDownload />
-                </IconButton>
-                <Typography variant="body1">Download Reports</Typography>
-              </ListItem>
-            </Tooltip>
+            <ListItem button component={Link} to="/admin-overview">
+              <Tooltip title="Overview" placement="right">
+                <IconButton color="primary"><Dashboard /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Overview</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/add-user">
+              <Tooltip title="Add User" placement="right">
+                <IconButton color="primary"><PersonAdd /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Manage Users</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/upload-candidates">
+              <Tooltip title="Upload Candidates" placement="right">
+                <IconButton color="primary"><CloudUpload /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Upload Candidates</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/download-reports">
+              <Tooltip title="Download Reports" placement="right">
+                <IconButton color="primary"><CloudDownload /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Download Reports</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/account-info">
+              <Tooltip title="Account Info" placement="right">
+                <IconButton color="primary"><AccountCircle /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Account Info</Typography>
+            </ListItem>
           </>
         )}
         {user.role === 'Interviewer' && (
           <>
-            <Tooltip title="Overview" placement="right">
-              <ListItem button component={Link} to="/overview">
-                <IconButton>
-                  <Dashboard />
-                </IconButton>
-                <Typography variant="body1">Overview</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Book My Slots" placement="right">
-              <ListItem button component={Link} to="/book-slots">
-                <IconButton>
-                  <Event />
-                </IconButton>
-                <Typography variant="body1">Book My Slots</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="View My Slots" placement="right">
-              <ListItem button component={Link} to="/view-slots">
-                <IconButton>
-                  <Event />
-                </IconButton>
-                <Typography variant="body1">View My Slots</Typography>
-              </ListItem>
-            </Tooltip>
+            <ListItem button component={Link} to="/interviewer-overview">
+              <Tooltip title="Overview" placement="right">
+                <IconButton color="primary"><Dashboard /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Overview</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/add-slots">
+              <Tooltip title="Add Slots" placement="right">
+                <IconButton color="primary"><Event /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Add Free Slots</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/view-slots">
+              <Tooltip title="View Slots" placement="right">
+                <IconButton color="primary"><Event /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">View Slots</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/account-info">
+              <Tooltip title="Account Info" placement="right">
+                <IconButton color="primary"><AccountCircle /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Account Info</Typography>
+            </ListItem>
           </>
         )}
         {user.role === 'Recruitment' && (
           <>
-            <Tooltip title="Overview" placement="right">
-              <ListItem button component={Link} to="/overview">
-                <IconButton>
-                  <Dashboard />
-                </IconButton>
-                <Typography variant="body1">Overview</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Reserve Slot" placement="right">
-              <ListItem button component={Link} to="/reserve-slot">
-                <IconButton>
-                  <Event />
-                </IconButton>
-                <Typography variant="body1">Reserve Slot</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Free Slot" placement="right">
-              <ListItem button component={Link} to="/free-slot">
-                <IconButton>
-                  <Event />
-                </IconButton>
-                <Typography variant="body1">Free Slot</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Booked Slot" placement="right">
-              <ListItem button component={Link} to="/booked-slot">
-                <IconButton>
-                  <Event />
-                </IconButton>
-                <Typography variant="body1">Booked Slot</Typography>
-              </ListItem>
-            </Tooltip>
-            <Tooltip title="Selected Candidates" placement="right">
-              <ListItem button component={Link} to="/selected-candidates">
-                <IconButton>
-                  <Event />
-                </IconButton>
-                <Typography variant="body1">Selected Candidates</Typography>
-              </ListItem>
-            </Tooltip>
+            <ListItem button component={Link} to="/recruiter-overview">
+              <Tooltip title="Overview" placement="right">
+                <IconButton color="primary"><Dashboard /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Overview</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/panel-mapping">
+              <Tooltip title="Panel Mapping" placement="right">
+                <IconButton color="primary"><Event /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Panel Mapping</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/mapped-interviews">
+              <Tooltip title="Mapped Interviews" placement="right">
+                <IconButton color="primary"><Event /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Mapped Interviews</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/available-slots">
+              <Tooltip title="Available Slots" placement="right">
+                <IconButton color="primary"><Event /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Available Slots</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/completed-candidates">
+              <Tooltip title="Completed Candidates" placement="right">
+                <IconButton color="primary"><Event /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Completed Candidates</Typography>
+            </ListItem>
+            <ListItem button component={Link} to="/account-info">
+              <Tooltip title="Account Info" placement="right">
+                <IconButton color="primary"><AccountCircle /></IconButton>
+              </Tooltip>
+              <Typography variant="body1">Account Info</Typography>
+            </ListItem>
           </>
         )}
       </List>
@@ -192,66 +196,67 @@ const MainLayout = ({ onLogout, user, users, setUsers }) => {
   );
 
   return (
-    <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: 'flex' }}>
-        <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1, bgcolor: theme.palette.primary.main }}>
           <Toolbar>
             <IconButton edge="start" color="inherit" aria-label="menu" onClick={toggleDrawer}>
               <Menu />
             </IconButton>
-            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, color: 'inherit' }}>
+            <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: 'bold' }}>
               XploRE
             </Typography>
-            <IconButton sx={{ ml: 1 }} onClick={toggleDarkMode} color="inherit">
+            <IconButton onClick={toggleDarkMode} color="inherit">
               {darkMode ? <Brightness7 /> : <Brightness4 />}
             </IconButton>
-            <Button color="inherit" onClick={onLogout}>
-              <ExitToApp />
+            <Button color="secondary" variant="contained" onClick={onLogout} startIcon={<ExitToApp />}>
+              Logout
             </Button>
           </Toolbar>
         </AppBar>
         <Drawer
+          variant="persistent"
           anchor="left"
           open={drawerOpen}
-          onClose={toggleDrawer}
           sx={{
-            width: drawerWidth,
-            flexShrink: 0,
-            [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              paddingTop: '60px' // Adjust this value as needed
+            },
           }}
         >
           {drawerContent}
         </Drawer>
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: 3,
+            transition: theme.transitions.create('margin', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+            marginLeft: drawerOpen ? `${drawerWidth}px` : 0,
+          }}
+        >
           <Toolbar />
           <Routes>
-            <Route path="/" element={<Navigate to='/overview' />} />
+            <Route path="/admin-overview" element={<AdminOverviewPage />} />
+            <Route path="/add-user" element={<AddUserPage />} />
+            <Route path="/upload-candidates" element={<UploadProfilesPage />} />
+            <Route path="/download-reports" element={<DownloadReportsPage />} />
+            <Route path="/interviewer-overview" element={<OverviewPage />} />
+            <Route path="/add-slots" element={<BookSlotsPage />} />
+            <Route path="/view-slots" element={<ViewSlotsPage />} />
+            <Route path="/recruiter-overview" element={<OverviewRecruitmentPage />} />
+            <Route path="/panel-mapping" element={<ReserveSlotPage />} />
+            <Route path="/mapped-interviews" element={<BookedSlotPage />} />
+            <Route path="/available-slots" element={<FreeSlotPage />} />
+            <Route path="/completed-candidates" element={<SelectedCandidatesPage />} />
             <Route path="/account-info" element={<AccountInfoPage />} />
-            {user.role === 'admin' && (
-              <>
-                <Route path="/add-user" element={<AddUserPage users={users} setUsers={setUsers} />} />
-                <Route path="/overview" element={<AdminOverviewPage users={users} setUsers={setUsers} />} />
-                <Route path="/upload-profiles" element={<UploadProfilesPage />} />
-                <Route path="/download-reports" element={<DownloadReportsPage />} />
-              </>
-            )}
-            {user.role === 'Interviewer' && (
-              <>
-                <Route path="/overview" element={<OverviewPage />} />
-                <Route path="/book-slots" element={<BookSlotsPage />} />
-                <Route path="/view-slots" element={<ViewSlotsPage />} />
-              </>
-            )}
-            {user.role === 'Recruitment' && (
-              <>
-                <Route path="/overview" element={<OverviewRecruitmentPage />} />
-                <Route path="/reserve-slot" element={<ReserveSlotPage />} />
-                <Route path="/free-slot" element={<FreeSlotPage />} />
-                <Route path="/booked-slot" element={<BookedSlotPage />} />
-                <Route path="/selected-candidates" element={<SelectedCandidatesPage />} />
-              </>
-            )}
+            <Route path="*" element={<Navigate to={user.role === 'admin' ? '/admin-overview' : '/'} />} />
           </Routes>
         </Box>
       </Box>

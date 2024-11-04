@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { TextField, Button, Paper, MenuItem, Select, InputLabel, FormControl, Box, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, ListItemText, OutlinedInput, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Tooltip } from '@mui/material';
+import { TextField, Button, Paper, MenuItem, Select, InputLabel, FormControl, Box, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, ListItemText, OutlinedInput, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Tooltip, Grid } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import LockIcon from '@mui/icons-material/Lock';
@@ -14,13 +14,13 @@ const AddUserPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState(''); 
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
   const [users, setUsers] = useState([]);
   const [filterRole, setFilterRole] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
-  const [addUserExpanded, setAddUserExpanded] = useState(false); // Collapsible state
+  const [addUserExpanded, setAddUserExpanded] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editPanelDialogOpen, setEditPanelDialogOpen] = useState(false);
   const [stageCategory, setStageCategory] = useState([]);
@@ -28,20 +28,17 @@ const AddUserPage = () => {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [errors, setErrors] = useState({});
   const [editIndex, setEditIndex] = useState(null);
+  const token = localStorage.getItem('token');
 
-  const token = localStorage.getItem('token'); // Adjust this based on where you're storing the token
-
-  // Set up the config for axios requests with the Authorization header
   const axiosConfig = {
     headers: {
-      'Authorization': `Bearer ${token}`  // Add the JWT token in the Bearer format
+      'Authorization': `Bearer ${token}`
     }
   };
 
-  // Fetch users from the API
   const fetchUsers = async () => {
     try {
-      const responseAll = await axios.get('http://127.0.0.1:5000/users', axiosConfig); // Replace with your API endpoint
+      const responseAll = await axios.get('http://127.0.0.1:5000/users', axiosConfig);
       setUsers(responseAll.data);
     } catch (error) {
       toast.error('Failed to fetch users');
@@ -52,7 +49,6 @@ const AddUserPage = () => {
     fetchUsers();
   }, []);
 
-  // Form validation logic
   const validateForm = () => {
     const newErrors = {};
     if (!name) newErrors.name = 'Name is required';
@@ -60,7 +56,7 @@ const AddUserPage = () => {
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email is invalid';
     if (!password) newErrors.password = 'Password is required';
     else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters long';
-    if (!phone) newErrors.phone = 'Phone number is required'; // Phone validation
+    if (!phone) newErrors.phone = 'Phone number is required';
     if (!role) newErrors.role = 'Role is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -70,19 +66,18 @@ const AddUserPage = () => {
     if (validateForm()) {
       try {
         const newUser = { name, email, password, phone, role };
-        const response = await axios.post('http://127.0.0.1:5000/users/sign-up', newUser, axiosConfig); // Replace with your API endpoint
-        setUsers([...users, response.data]); // Add user to state
+        const response = await axios.post('http://127.0.0.1:5000/users/sign-up', newUser, axiosConfig);
+        setUsers([...users, response.data]);
         fetchUsers();
         toast.success('User added successfully!');
         if (role === 'Interviewer') {
           setOpenDialog(true);
-          // Store user ID for later use
           setEditIndex(response.data.id);
         } else {
           clearFields();
         }
       } catch (error) {
-        if (error.response.data.error.statusCode === 409){
+        if (error.response.data.error.statusCode === 409) {
           toast.error('Email is already taken');
         } else {
           toast.error('Failed to add user');
@@ -92,36 +87,32 @@ const AddUserPage = () => {
   };
 
   const handleConfirmInterviewer = async () => {
-
-    if (!stageCategory.length === 0 || !experienceCategory || selectedSkills.length === 0) {
+    if (!stageCategory.length || !experienceCategory || !selectedSkills.length) {
       toast.error('Please fill out all fields for the interviewer.');
       return;
     }
-
     try {
-      const interviewerDetails = { // Use the ID of the created user
+      const interviewerDetails = {
         stages_category: stageCategory,
         experience_category: experienceCategory,
         domain: selectedSkills
       };
-      if(!editPanelDialogOpen){
-      await axios.post(`http://127.0.0.1:5000/users/${editIndex}/panel`, interviewerDetails, axiosConfig); // Replace with your API endpoint
-      toast.success('Interviewer details added successfully!');
-      }
-      else{
-      await axios.patch(`http://127.0.0.1:5000/users/${editIndex}/panel`, interviewerDetails, axiosConfig); // Replace with your API endpoint
-      toast.success('Interviewer details updated successfully!');
+      if (!editPanelDialogOpen) {
+        await axios.post(`http://127.0.0.1:5000/users/${editIndex}/panel`, interviewerDetails, axiosConfig);
+        toast.success('Interviewer details added successfully!');
+      } else {
+        await axios.patch(`http://127.0.0.1:5000/users/${editIndex}/panel`, interviewerDetails, axiosConfig);
+        toast.success('Interviewer details updated successfully!');
       }
       setOpenDialog(false);
       setEditPanelDialogOpen(false);
       fetchUsers();
       clearFields();
     } catch (error) {
-      if(!editPanelDialogOpen){
-      toast.error('Failed to add interviewer details');
-      }
-      else{
-        toast.error('Failed to update interviewer details'); 
+      if (!editPanelDialogOpen) {
+        toast.error('Failed to add interviewer details');
+      } else {
+        toast.error('Failed to update interviewer details');
       }
     }
   };
@@ -129,12 +120,11 @@ const AddUserPage = () => {
   const handleChangePassword = async (id) => {
     const newpassword = prompt('Enter new password:');
     if (!newpassword) return;
-    
+
     if (newpassword.length < 8) {
       toast.error('Password must be at least 8 characters long');
       return;
     }
-
     try {
       await axios.post(`http://127.0.0.1:5000/users/${id}/change-password`, { newPassword: newpassword }, axiosConfig);
       toast.success('Password updated successfully!');
@@ -147,7 +137,7 @@ const AddUserPage = () => {
     setName('');
     setEmail('');
     setPassword('');
-    setPhone(''); // Clear phone field
+    setPhone('');
     setRole('');
     setStageCategory([]);
     setExperienceCategory('');
@@ -179,43 +169,41 @@ const AddUserPage = () => {
     const user = users[index];
     setName(user.name);
     setEmail(user.email);
-    setPhone(user.phone); 
+    setPhone(user.phone);
     setRole(user.role);
-    setEditIndex(user.id); 
+    setEditIndex(user.id);
     setEditDialogOpen(true);
   };
 
   const handleUpdateUser = async () => {
     try {
-        const updatedUser = { name, email, phone, role };
-        const response = await axios.patch(`http://127.0.0.1:5000/users/${editIndex}`, updatedUser, axiosConfig); // Replace with your API endpoint
-        fetchUsers();
-        setEditDialogOpen(false);
-        toast.success('User updated successfully!');
-        if (role === 'Interviewer') {
-          setOpenDialog(true);
-          setEditPanelDialogOpen(true)
-          // Store user ID for later use
-          setEditIndex(response.data.id);
-        } else {
-          clearFields();
-        }
-      } catch (error) {
-        if (error.response.data.error.statusCode === 409){
-          toast.error('Email is already taken');
-        } else {
-          toast.error('Failed to update user');
-        }
+      const updatedUser = { name, email, phone, role };
+      const response = await axios.patch(`http://127.0.0.1:5000/users/${editIndex}`, updatedUser, axiosConfig);
+      fetchUsers();
+      setEditDialogOpen(false);
+      toast.success('User updated successfully!');
+      if (role === 'Interviewer') {
+        setOpenDialog(true);
+        setEditPanelDialogOpen(true);
+        setEditIndex(response.data.id);
+      } else {
+        clearFields();
       }
+    } catch (error) {
+      if (error.response.data.error.statusCode === 409) {
+        toast.error('Email is already taken');
+      } else {
+        toast.error('Failed to update user');
+      }
+    }
   };
 
   return (
     <Box sx={{ p: 3 }}>
       <ToastContainer />
-      
       <Paper elevation={3} sx={{ p: 3, mt: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1976d2', color: 'white', borderRadius: 2 }}>
-          <Typography variant="h4" sx={{ p: 2, textAlign: 'center', width: '100%' }}>
+          <Typography variant="h5" sx={{ p: 1, textAlign: 'center', width: '100%', fontWeight: 'medium' }}>
             Create New User
           </Typography>
           <IconButton onClick={() => setAddUserExpanded(!addUserExpanded)}>
@@ -224,69 +212,81 @@ const AddUserPage = () => {
         </Box>
         {addUserExpanded && (
           <form>
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              fullWidth
-              margin="normal"
-              error={!!errors.name}
-              helperText={errors.name}
-            />
-            <TextField
-              label="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              fullWidth
-              margin="normal"
-              error={!!errors.email}
-              helperText={errors.email}
-            />
-            <TextField
-              label="Phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              fullWidth
-              margin="normal"
-              error={!!errors.phone}
-              helperText={errors.phone}
-            />
-            <TextField
-              label="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-              margin="normal"
-              type="password"
-              error={!!errors.password}
-              helperText={errors.password}
-            />
-            <FormControl fullWidth margin="normal" error={!!errors.role}>
-              <InputLabel>Role</InputLabel>
-              <Select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                label="Role"
-              >
-                <MenuItem value="Admin">Admin</MenuItem>
-                <MenuItem value="Supervisor">Supervisor</MenuItem>
-                <MenuItem value="Recruitment">Recruitment</MenuItem>
-                <MenuItem value="Interviewer">Interviewer</MenuItem>
-              </Select>
-            </FormControl>
-            {errors.role && <p style={{ color: 'red' }}>{errors.role}</p>}
-            <Button variant="contained" color="primary" onClick={handleAddUser} sx={{ mt: 2 }}>
-              Create User
-            </Button>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.name}
+                  helperText={errors.name}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.email}
+                  helperText={errors.email}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  error={!!errors.phone}
+                  helperText={errors.phone}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  fullWidth
+                  margin="normal"
+                  type="password"
+                  error={!!errors.password}
+                  helperText={errors.password}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth margin="normal" error={!!errors.role}>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    label="Role"
+                  >
+                    <MenuItem value="Admin">Admin</MenuItem>
+                    <MenuItem value="Supervisor">Supervisor</MenuItem>
+                    <MenuItem value="Recruitment">Recruitment</MenuItem>
+                    <MenuItem value="Interviewer">Interviewer</MenuItem>
+                  </Select>
+                </FormControl>
+                {errors.role && <p style={{ color: 'red' }}>{errors.role}</p>}
+              </Grid>
+              <Grid item xs={12}>
+                <Button variant="contained" color="primary" onClick={handleAddUser} sx={{ mt: 2 }}>
+                  Create User
+                </Button>
+              </Grid>
+            </Grid>
           </form>
         )}
       </Paper>
-
       <Paper elevation={3} sx={{ p: 3, mt: 4 }}>
-        <Typography variant="h4" sx={{ backgroundColor: '#1976d2', color: 'white', p: 2, textAlign: 'center', borderRadius: 2 }}>
+        <Typography variant="h5" sx={{ backgroundColor: '#1976d2', color: 'white', p: 1, textAlign: 'center', borderRadius: 2, fontWeight: 'medium' }}>
           Manage Users
         </Typography>
-        
         <TextField
           label="Search Users"
           value={searchQuery}
@@ -294,7 +294,6 @@ const AddUserPage = () => {
           fullWidth
           margin="normal"
         />
-        
         <FormControl fullWidth sx={{ mt: 4 }}>
           <InputLabel>Filter by Role</InputLabel>
           <Select
@@ -309,7 +308,6 @@ const AddUserPage = () => {
             <MenuItem value="Interviewer">Interviewer</MenuItem>
           </Select>
         </FormControl>
-
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -351,12 +349,10 @@ const AddUserPage = () => {
           </Table>
         </TableContainer>
       </Paper>
-
-      {/* Dialogs for edit user and other actions remain unchanged */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>Add Interviewer Details</DialogTitle>
         <DialogContent>
-        <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal">
             <InputLabel>Stage Category</InputLabel>
             <Select
               multiple
@@ -364,9 +360,9 @@ const AddUserPage = () => {
               onChange={(e) => {
                 const { value } = e.target;
                 if (value.includes('L2')) {
-                  setStageCategory(['L1', 'L2']); // Select both L1 and L2
+                  setStageCategory(['L1', 'L2']);
                 } else {
-                  setStageCategory(value); // Select only L1
+                  setStageCategory(value);
                 }
               }}
               input={<OutlinedInput label="Stage Category" />}
@@ -418,7 +414,6 @@ const AddUserPage = () => {
           <Button onClick={handleConfirmInterviewer}>Confirm</Button>
         </DialogActions>
       </Dialog>
-
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
         <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
@@ -437,7 +432,7 @@ const AddUserPage = () => {
             margin="normal"
           />
           <TextField
-            label="Phone" // Edit phone field
+            label="Phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             fullWidth

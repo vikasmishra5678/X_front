@@ -12,16 +12,15 @@ const ViewSlotsPage = () => {
   const [userInfo, setUserInfo] = useState({});
   const [panelInfo, setPanelInfo] = useState({});
   const [panelSlots, setPanelSlots] = useState([]);
-
+  
   // Filters state
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // January is 0, so we add 1
   const [selectedDay, setSelectedDay] = useState('');
-
+  
   // Get the JWT token from localStorage
   const token = localStorage.getItem('token'); 
-
   const axiosConfig = {
     headers: {
       'Authorization': `Bearer ${token}`
@@ -32,14 +31,14 @@ const ViewSlotsPage = () => {
     try {
       const response = await axios.get(`http://localhost:5000/panels/${panelId}/panel-slots`, axiosConfig);
       const fetchedSlots = response.data;
-  
+      
       const parsedSlots = fetchedSlots.map(slot => ({
         ...slot,
         date: slot.date,
         time: slot.time,
         duration: parseInt(slot.duration, 10),
       }));
-  
+      
       setPanelSlots(parsedSlots);
     } catch (error) {
       console.error('Error fetching panel slots:', error);
@@ -52,13 +51,13 @@ const ViewSlotsPage = () => {
       .then(response => {
         const userData = response.data;
         setUserInfo(userData);
-  
+        
         return axios.get(`http://localhost:5000/users/${userData.id}/panel`, axiosConfig);
       })
       .then(response => {
         const panelData = response.data;
         setPanelInfo(panelData);
-  
+        
         fetchPanelSlots(panelData.id);
       })
       .catch(error => {
@@ -118,23 +117,23 @@ const ViewSlotsPage = () => {
       {/* Filter section for Year, Month, Day */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={4}>
-        <FormControl fullWidth>
-          <InputLabel>Year</InputLabel>
-          <Select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            label="Year"
-          >
-            {[...Array(7)].map((_, i) => {
-              const year = currentYear - 3 + i; // Generate years from currentYear - 3 to currentYear + 3
-              return (
-                <MenuItem key={year} value={year}>
-                  {year}
-                </MenuItem>
-              );
-            })}
-          </Select>
-        </FormControl>
+          <FormControl fullWidth>
+            <InputLabel>Year</InputLabel>
+            <Select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              label="Year"
+            >
+              {[...Array(7)].map((_, i) => {
+                const year = currentYear - 3 + i; // Generate years from currentYear - 3 to currentYear + 3
+                return (
+                  <MenuItem key={year} value={year}>
+                    {year}
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
         </Grid>
         <Grid item xs={4}>
           <FormControl fullWidth>
@@ -168,7 +167,7 @@ const ViewSlotsPage = () => {
           </FormControl>
         </Grid>
       </Grid>
-
+      
       {/* Table to display slots */}
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="booked slots table">
@@ -178,6 +177,7 @@ const ViewSlotsPage = () => {
               <TableCell>Start Time</TableCell>
               <TableCell>End Time</TableCell>
               <TableCell>Duration</TableCell>
+              <TableCell>Status</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -192,8 +192,12 @@ const ViewSlotsPage = () => {
                     <TableCell>{format(startTime, 'HH:mm')}</TableCell>
                     <TableCell>{format(endTime, 'HH:mm')}</TableCell>
                     <TableCell>{slot.duration} minutes</TableCell>
+                    <TableCell>{slot.status}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleClickOpen(slot)}>
+                      <IconButton
+                        onClick={() => handleClickOpen(slot)}
+                        disabled={slot.status === 'booked'}
+                      >
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>
@@ -202,7 +206,7 @@ const ViewSlotsPage = () => {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   No slots available for the selected date.
                 </TableCell>
               </TableRow>
@@ -210,7 +214,7 @@ const ViewSlotsPage = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
+      
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={open}
