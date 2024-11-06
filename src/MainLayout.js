@@ -178,10 +178,10 @@ const MainLayout = ({ onLogout, user }) => {
               <Typography variant="body1">Available Slots</Typography>
             </ListItem>
             <ListItem button component={Link} to="/completed-candidates">
-              <Tooltip title="Completed Candidates" placement="right">
+              <Tooltip title="All Candidates" placement="right">
                 <IconButton color="primary"><Event /></IconButton>
               </Tooltip>
-              <Typography variant="body1">Completed Candidates</Typography>
+              <Typography variant="body1">All Candidates</Typography>
             </ListItem>
             <ListItem button component={Link} to="/account-info">
               <Tooltip title="Account Info" placement="right">

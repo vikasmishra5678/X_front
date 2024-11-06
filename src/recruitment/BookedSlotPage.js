@@ -90,7 +90,6 @@ const BookedSlotPage = () => {
                 statusUpdate.l2_status = 'waiting';
             }
         }
-
         try {
             await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}/candidate-status`, statusUpdate, axiosConfig);
             alert('Feedback updated successfully');
@@ -98,6 +97,70 @@ const BookedSlotPage = () => {
         } catch (error) {
             console.error('Error updating feedback:', error);
         }
+    };
+
+    // Handle cancellation
+    const handleCancel = async (candidateId) => {
+        const status = candidateStatuses.find(status => status.candidateId === candidateId);
+        if (tabValue === 0) { // Cancel from L1
+            const response = await axios.get(`http://127.0.0.1:5000/users/${status.l1_panel}/panel`, axiosConfig);
+            const panelId = response.data.id;
+            // Update slot status to available
+            const slotResponse = await axios.get(`http://127.0.0.1:5000/panels/${panelId}/panel-slots`, {
+            params: {
+                filter: JSON.stringify({
+                where: {
+                    and: [
+                    { date: status.l1_date },
+                    { time: status.l1_time }
+                    ]
+                }
+                })
+            },
+            ...axiosConfig
+            });
+            const slotId = slotResponse.data[0]?.id;
+            const panelSlotData = {
+                status: 'available',
+            };
+            await axios.patch(`http://127.0.0.1:5000/panel-slots/${slotId}`, panelSlotData, axiosConfig);
+            alert('Interview cancelled successfully');
+            fetchCandidateStatuses(); // Refresh the candidate statuses
+            await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}`, { candidate_status: 'waiting' }, axiosConfig);
+            await axios.delete(`http://127.0.0.1:5000/candidates/${candidateId}/candidate-status`, axiosConfig);
+        } else if (tabValue === 1) { // Cancel from L2
+            const response = await axios.get(`http://127.0.0.1:5000/users/${status.l2_panel}/panel`, axiosConfig);
+            const panelId = response.data.id;
+            // Update slot status to available
+            const slotResponse = await axios.get(`http://127.0.0.1:5000/panels/${panelId}/panel-slots`, {
+            params: {
+                filter: JSON.stringify({
+                where: {
+                    and: [
+                    { date: status.l2_date },
+                    { time: status.l2_time }
+                    ]
+                }
+                })
+            },
+            ...axiosConfig
+            });
+            const slotId = slotResponse.data[0]?.id;
+            const panelSlotData = {
+                status: 'available',
+            };
+            await axios.patch(`http://127.0.0.1:5000/panel-slots/${slotId}`, panelSlotData, axiosConfig);
+            alert('Interview cancelled successfully');
+            fetchCandidateStatuses(); // Refresh the candidate statuses
+            await axios.patch(`http://127.0.0.1:5000/candidates/${candidateId}/candidate-status`, {
+                l2_status: 'waiting',
+                l2_panel: '',
+                l2_date: '',
+                l2_time: '',
+                l2_feedback: ''
+            }, axiosConfig);
+        }
+        
     };
 
     return (
@@ -159,6 +222,14 @@ const BookedSlotPage = () => {
                                             onClick={() => handleSubmit(candidate.id)}
                                         >
                                             Submit
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            color="secondary"
+                                            onClick={() => handleCancel(candidate.id)}
+                                            style={{ marginLeft: '10px' }}
+                                        >
+                                            Cancel
                                         </Button>
                                     </TableCell>
                                 </TableRow>

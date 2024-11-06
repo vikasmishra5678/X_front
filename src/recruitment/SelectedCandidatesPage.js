@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import axios from 'axios';
 
 const SelectedCandidatesPage = () => {
@@ -8,6 +8,8 @@ const SelectedCandidatesPage = () => {
   const [interviewers, setInterviewers] = useState({});
   const [filteredCandidates, setFilteredCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [open, setOpen] = useState(false);
+  const [currentCandidate, setCurrentCandidate] = useState(null);
   const token = localStorage.getItem('token');
   const axiosConfig = {
     headers: {
@@ -55,20 +57,23 @@ const SelectedCandidatesPage = () => {
     const selectedCandidates = candidates.map(candidate => {
       const status = candidateStatuses.find(status => status.candidateId === candidate.id);
       if (status) {
-        userIds.add(status.l1_panel);
-        userIds.add(status.l2_panel);
+        if (status.l1_panel) {
+          userIds.add(status.l1_panel);
+        }
+        if (status.l2_panel) {
+          userIds.add(status.l2_panel);
+        }
       }
       return {
         ...candidate,
-        l1Interviewer: status ? status.l1_panel : '',
-        l1Date: status ? status.l1_date : '',
-        l1Time: status ? status.l1_time : '',
-        l2Interviewer: status ? status.l2_panel : '',
-        l2Date: status ? status.l2_date : '',
-        l2Time: status ? status.l2_time : '',
+        l1_panel: status ? status.l1_panel : '',
+        l1_date: status ? status.l1_date : '',
+        l1_time: status ? status.l1_time : '',
+        l2_panel: status ? status.l2_panel : '',
+        l2_date: status ? status.l2_date : '',
+        l2_time: status ? status.l2_time : '',
       };
-    }).filter(candidate => candidate.candidate_status === 'selected' || candidate.candidate_status === 'rejected');
-
+    });
     fetchInterviewerNames(Array.from(userIds));
     setFilteredCandidates(selectedCandidates);
   };
@@ -97,36 +102,73 @@ const SelectedCandidatesPage = () => {
       const status = candidateStatuses.find(status => status.candidateId === candidate.id);
       return {
         ...candidate,
-        l1Interviewer: status ? status.l1_panel : '',
-        l1Date: status ? status.l1_date : '',
-        l1Time: status ? status.l1_time : '',
-        l2Interviewer: status ? status.l2_panel : '',
-        l2Date: status ? status.l2_date : '',
-        l2Time: status ? status.l2_time : '',
+        l1_panel: status ? status.l1_panel : '',
+        l1_date: status ? status.l1_date : '',
+        l1_time: status ? status.l1_time : '',
+        l2_panel: status ? status.l2_panel : '',
+        l2_date: status ? status.l2_date : '',
+        l2_time: status ? status.l2_time : '',
       };
     }).filter(candidate => 
-      (candidate.candidate_status === 'selected' || candidate.candidate_status === 'rejected') &&
-      (candidate.name.toLowerCase().includes(lowercasedTerm) ||
-      candidate.email.toLowerCase().includes(lowercasedTerm) ||
-      candidate.phone.toLowerCase().includes(lowercasedTerm) ||
-      candidate.totalExperience.toString().includes(lowercasedTerm) ||
-      candidate.relevantExperience.toString().includes(lowercasedTerm) ||
-      candidate.domain.join(', ').toLowerCase().includes(lowercasedTerm) ||
-      (interviewers[candidate.l1Interviewer] || '').toLowerCase().includes(lowercasedTerm) ||
-      candidate.l1Date.toLowerCase().includes(lowercasedTerm) ||
-      candidate.l1Time.toLowerCase().includes(lowercasedTerm) ||
-      (interviewers[candidate.l2Interviewer] || '').toLowerCase().includes(lowercasedTerm) ||
-      candidate.l2Date.toLowerCase().includes(lowercasedTerm) ||
-      candidate.l2Time.toLowerCase().includes(lowercasedTerm) ||
-      candidate.candidate_status.toLowerCase().includes(lowercasedTerm))
+      Object.keys(candidate).some(key => 
+        candidate[key] && candidate[key].toString().toLowerCase().includes(lowercasedTerm)
+      )
     );
-
     setFilteredCandidates(filtered);
+  };
+
+  // Open dialog for editing candidate
+  const handleEditClick = (candidate) => {
+    setCurrentCandidate(candidate);
+    setOpen(true);
+  };
+
+  // Close dialog
+  const handleClose = () => {
+    setOpen(false);
+    setCurrentCandidate(null);
+  };
+
+  // Handle candidate data change
+  const handleCandidateChange = (event) => {
+    const { name, value } = event.target;
+    setCurrentCandidate({ ...currentCandidate, [name]: value });
+  };
+
+  // Save candidate data
+  const handleSave = async () => {
+    try {
+      // Create a new object with only the fields to be updated
+      const updatedCandidate = {
+        name: currentCandidate.name,
+        email: currentCandidate.email,
+        phone: currentCandidate.phone,
+        totalExperience: currentCandidate.totalExperience,
+        relevantExperience: currentCandidate.relevantExperience,
+        domain: currentCandidate.domain,
+      };
+
+      await axios.patch(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, updatedCandidate, axiosConfig);
+      fetchCandidates();
+      handleClose();
+    } catch (error) {
+      console.error('Error saving candidate data:', error);
+    }
+  };
+
+  // Delete candidate
+  const handleDeleteClick = async (id) => {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/candidates/${id}`, axiosConfig);
+      fetchCandidates();
+    } catch (error) {
+      console.error('Error deleting candidate:', error);
+    }
   };
 
   return (
     <div className="container">
-      <h1>Selected Candidates</h1>
+      <h1>All Candidates</h1>
       <TextField
         label="Search Candidates"
         variant="outlined"
@@ -152,6 +194,7 @@ const SelectedCandidatesPage = () => {
               <TableCell>L2 Date</TableCell>
               <TableCell>L2 Time</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -163,18 +206,99 @@ const SelectedCandidatesPage = () => {
                 <TableCell>{candidate.totalExperience}</TableCell>
                 <TableCell>{candidate.relevantExperience}</TableCell>
                 <TableCell>{candidate.domain.join(', ')}</TableCell>
-                <TableCell>{interviewers[candidate.l1Interviewer]}</TableCell>
-                <TableCell>{candidate.l1Date}</TableCell>
-                <TableCell>{candidate.l1Time}</TableCell>
-                <TableCell>{interviewers[candidate.l2Interviewer]}</TableCell>
-                <TableCell>{candidate.l2Date}</TableCell>
-                <TableCell>{candidate.l2Time}</TableCell>
+                <TableCell>{interviewers[candidate.l1_panel]}</TableCell>
+                <TableCell>{candidate.l1_date}</TableCell>
+                <TableCell>{candidate.l1_time}</TableCell>
+                <TableCell>{interviewers[candidate.l2_panel]}</TableCell>
+                <TableCell>{candidate.l2_date}</TableCell>
+                <TableCell>{candidate.l2_time}</TableCell>
                 <TableCell>{candidate.candidate_status}</TableCell>
+                <TableCell>
+                  <Button onClick={() => handleEditClick(candidate)}>Edit</Button>
+                  <Button onClick={() => handleDeleteClick(candidate.id)}>Delete</Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Edit Candidate</DialogTitle>
+        <DialogContent>
+          {currentCandidate && (
+            <>
+              <TextField
+                margin="dense"
+                label="Name"
+                type="text"
+                fullWidth
+                name="name"
+                value={currentCandidate.name}
+                onChange={handleCandidateChange}
+              />
+              <TextField
+                margin="dense"
+                label="Email"
+                type="email"
+                fullWidth
+                name="email"
+                value={currentCandidate.email}
+                onChange={handleCandidateChange}
+              />
+              <TextField
+                margin="dense"
+                label="Phone"
+                type="text"
+                fullWidth
+                name="phone"
+                value={currentCandidate.phone}
+                onChange={handleCandidateChange}
+              />
+              <TextField
+                margin="dense"
+                label="Total Experience"
+                type="number"
+                fullWidth
+                name="totalExperience"
+                value={currentCandidate.totalExperience}
+                onChange={handleCandidateChange}
+              />
+              <TextField
+                margin="dense"
+                label="Relevant Experience"
+                type="number"
+                fullWidth
+                name="relevantExperience"
+                value={currentCandidate.relevantExperience}
+                onChange={handleCandidateChange}
+              />
+              <TextField
+                margin="dense"
+                label="Skillset"
+                type="text"
+                fullWidth
+                name="domain"
+                value={currentCandidate.domain.join(', ')}
+                onChange={(e) => handleCandidateChange({
+                  target: {
+                    name: 'domain',
+                    value: e.target.value.split(',').map(skill => skill.trim())
+                  }
+                })}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} color="primary">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

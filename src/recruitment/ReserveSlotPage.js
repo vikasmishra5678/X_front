@@ -235,6 +235,7 @@ const ReserveSlotPage = () => {
           <TableRow>
             <TableCell>Name</TableCell>
             <TableCell>Email</TableCell>
+            <TableCell>Phone</TableCell>
             <TableCell>Total Experience</TableCell>
             <TableCell>Relevant Experience</TableCell>
             <TableCell>Skillset</TableCell>
@@ -249,6 +250,7 @@ const ReserveSlotPage = () => {
             <TableRow key={index}>
               <TableCell>{candidate.name}</TableCell>
               <TableCell>{candidate.email}</TableCell>
+              <TableCell>{candidate.phone}</TableCell>
               <TableCell>{candidate.totalExperience}</TableCell>
               <TableCell>{candidate.relevantExperience}</TableCell>
               <TableCell>{candidate.domain.join(', ')}</TableCell>

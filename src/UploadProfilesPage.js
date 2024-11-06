@@ -6,6 +6,12 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const DOMAIN_OPTIONS = ['Engineering', 'Marketing', 'Finance', 'HR', 'Design', 'Product'];
+const token = localStorage.getItem('token');
+const axiosConfig = {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+};
 
 const UploadProfilesPage = () => {
   const [formData, setFormData] = useState({
@@ -58,7 +64,7 @@ const UploadProfilesPage = () => {
       }));
       console.log(jsonData);
       try {
-        const response = await axios.post('http://localhost:5000/candidates/bulk-upload', jsonData);
+        const response = await axios.post('http://localhost:5000/candidates/bulk-upload', jsonData, axiosConfig);
         setSummary(response.data);
         toast.success('Candidates uploaded successfully!');
         clearForm();
@@ -89,7 +95,7 @@ const UploadProfilesPage = () => {
   const handleSubmit = async () => {
     try {
       console.log(formData);
-      const response = await axios.post('http://localhost:5000/candidates', formData);
+      const response = await axios.post('http://localhost:5000/candidates', formData, axiosConfig);
       setSummary(response.data);
       toast.success('Candidate added successfully!');
       clearForm();
