@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogTitle, DialogContent, FormControl, Select, MenuItem, TextField, Grid, InputLabel } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogTitle, DialogContent, FormControl, Select, MenuItem, TextField, Grid, InputLabel, IconButton, CircularProgress, TablePagination, TableSortLabel } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import format from 'date-fns/format';
 import addMinutes from 'date-fns/addMinutes';
+import './FreeSlotPage.css';
 
 const FreeSlotsPage = () => {
   const [interviewers, setInterviewers] = useState([]);
@@ -14,6 +16,11 @@ const FreeSlotsPage = () => {
   const [monthFilter, setMonthFilter] = useState(new Date().getMonth() + 1);
   const [dayFilter, setDayFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('name');
   const token = localStorage.getItem('token');
   const axiosConfig = {
     headers: {
@@ -28,8 +35,10 @@ const FreeSlotsPage = () => {
       const interviewerUsers = response.data.filter(user => user.role === 'Interviewer');
       setInterviewers(interviewerUsers);
       interviewerUsers.forEach(user => fetchPanelData(user.id));
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setLoading(false);
     }
   };
 
@@ -86,6 +95,21 @@ const FreeSlotsPage = () => {
     setDayFilter(event.target.value);
   };
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
   // Filter slots based on year, month, day, and selected interviewer
   const filteredSlots = selectedInterviewer ? (slots[selectedInterviewer.id] || []).filter(slot => {
     const slotDate = new Date(`${slot.date}T${slot.time}`);
@@ -107,6 +131,13 @@ const FreeSlotsPage = () => {
     );
   });
 
+  const sortedInterviewers = filteredInterviewers.sort((a, b) => {
+    if (orderBy === 'name') {
+      return order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+    }
+    return 0;
+  });
+
   return (
     <div className="container">
       <h1>Free Slots</h1>
@@ -118,55 +149,76 @@ const FreeSlotsPage = () => {
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{ marginBottom: '20px' }}
       />
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Interviewer Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Stages Category</TableCell>
-              <TableCell>Domain</TableCell>
-              <TableCell>Experience Category</TableCell>
-              <TableCell>Action</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredInterviewers.map((interviewer, index) => {
-              const panel = panels[interviewer.id];
-              return (
-                <TableRow key={index}>
-                  <TableCell>{interviewer.name}</TableCell>
-                  <TableCell>{interviewer.email}</TableCell>
-                  <TableCell>{interviewer.phone}</TableCell>
-                  <TableCell>{(panel?.stages_category || []).join(', ')}</TableCell>
-                  <TableCell>{(panel?.domain || []).join(', ')}</TableCell>
-                  <TableCell>{panel?.experience_category}</TableCell>
-                  <TableCell>
-                    <Button variant="contained" color="primary" onClick={() => handleInterviewerClick(interviewer)}>
-                      View Slots
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {/* Dialog for displaying slots */}
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <TableContainer component={Paper} className="table-container">
+          <Table stickyHeader className="custom-table">
+            <TableHead>
+              <TableRow>
+                <TableCell sortDirection={orderBy === 'name' ? order : false}>
+                  <TableSortLabel
+                    active={orderBy === 'name'}
+                    direction={orderBy === 'name' ? order : 'asc'}
+                    onClick={() => handleRequestSort('name')}
+                  >
+                    Interviewer Name
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Stages Category</TableCell>
+                <TableCell>Domain</TableCell>
+                <TableCell>Experience Category</TableCell>
+                <TableCell>Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedInterviewers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((interviewer, index) => {
+                const panel = panels[interviewer.id];
+                return (
+                  <TableRow key={index} hover>
+                    <TableCell>{interviewer.name}</TableCell>
+                    <TableCell>{interviewer.email}</TableCell>
+                    <TableCell>{interviewer.phone}</TableCell>
+                    <TableCell>{(panel?.stages_category || []).join(', ')}</TableCell>
+                    <TableCell>{(panel?.domain || []).join(', ')}</TableCell>
+                    <TableCell>{panel?.experience_category}</TableCell>
+                    <TableCell>
+                      <Button variant="contained" color="primary" onClick={() => handleInterviewerClick(interviewer)}>
+                        View Slots
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredInterviewers.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </TableContainer>
+      )}
       {selectedInterviewer && (
         <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="md">
-          <DialogTitle>Available Slots for {selectedInterviewer.name}</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mb: 3 }}>
+          <DialogTitle className="dialog-title">
+            Available Slots for {selectedInterviewer.name}
+            <IconButton aria-label="close" onClick={handleCloseDialog}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent className="dialog-content">
+            <Grid container spacing={2}>
               <Grid item xs={4}>
                 <FormControl fullWidth>
                   <InputLabel>Year</InputLabel>
-                  <Select
-                    value={yearFilter}
-                    onChange={handleYearChange}
-                    label="Year"
-                  >
+                  <Select value={yearFilter} onChange={handleYearChange} label="Year">
                     {[...Array(7)].map((_, i) => {
                       const year = new Date().getFullYear() - 3 + i;
                       return (
@@ -181,11 +233,7 @@ const FreeSlotsPage = () => {
               <Grid item xs={4}>
                 <FormControl fullWidth>
                   <InputLabel>Month</InputLabel>
-                  <Select
-                    value={monthFilter}
-                    onChange={handleMonthChange}
-                    label="Month"
-                  >
+                  <Select value={monthFilter} onChange={handleMonthChange} label="Month">
                     {[...Array(12)].map((_, i) => (
                       <MenuItem key={i + 1} value={i + 1}>
                         {format(new Date(2020, i, 1), 'MMMM')}
@@ -197,20 +245,17 @@ const FreeSlotsPage = () => {
               <Grid item xs={4}>
                 <FormControl fullWidth>
                   <InputLabel>Day</InputLabel>
-                  <Select
-                    value={dayFilter}
-                    onChange={handleDayChange}
-                    label="Day"
-                  >
+                  <Select value={dayFilter} onChange={handleDayChange} label="Day">
                     <MenuItem value="">All Days</MenuItem>
                     {[...Array(31)].map((_, i) => (
-                      <MenuItem key={i + 1} value={i + 1}>{i + 1}</MenuItem>
+                      <MenuItem key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
             </Grid>
-            {/* Display filtered slots */}
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import axios from 'axios';
+import './SelectedCandidatesPage.css';
 
 const SelectedCandidatesPage = () => {
   const [candidates, setCandidates] = useState([]);
@@ -17,7 +18,6 @@ const SelectedCandidatesPage = () => {
     },
   };
 
-  // Fetch candidates
   const fetchCandidates = async () => {
     try {
       const response = await axios.get('http://127.0.0.1:5000/candidates', axiosConfig);
@@ -27,7 +27,6 @@ const SelectedCandidatesPage = () => {
     }
   };
 
-  // Fetch candidate statuses
   const fetchCandidateStatuses = async () => {
     try {
       const response = await axios.get('http://127.0.0.1:5000/candidate-statuses', axiosConfig);
@@ -37,7 +36,6 @@ const SelectedCandidatesPage = () => {
     }
   };
 
-  // Fetch interviewer names
   const fetchInterviewerNames = async (userIds) => {
     try {
       const responses = await Promise.all(userIds.map(userId => axios.get(`http://127.0.0.1:5000/users/${userId}`, axiosConfig)));
@@ -51,18 +49,13 @@ const SelectedCandidatesPage = () => {
     }
   };
 
-  // Map candidates with statuses and fetch interviewer names
   const mapCandidatesWithStatuses = () => {
     const userIds = new Set();
     const selectedCandidates = candidates.map(candidate => {
       const status = candidateStatuses.find(status => status.candidateId === candidate.id);
       if (status) {
-        if (status.l1_panel) {
-          userIds.add(status.l1_panel);
-        }
-        if (status.l2_panel) {
-          userIds.add(status.l2_panel);
-        }
+        if (status.l1_panel) userIds.add(status.l1_panel);
+        if (status.l2_panel) userIds.add(status.l2_panel);
       }
       return {
         ...candidate,
@@ -89,13 +82,11 @@ const SelectedCandidatesPage = () => {
     }
   }, [candidates, candidateStatuses]);
 
-  // Handle search term change
   const handleSearchTermChange = (event) => {
     setSearchTerm(event.target.value);
     filterCandidates(event.target.value);
   };
 
-  // Filter candidates based on search term
   const filterCandidates = (term) => {
     const lowercasedTerm = term.toLowerCase();
     const filtered = candidates.map(candidate => {
@@ -109,46 +100,32 @@ const SelectedCandidatesPage = () => {
         l2_date: status ? status.l2_date : '',
         l2_time: status ? status.l2_time : '',
       };
-    }).filter(candidate => 
-      Object.keys(candidate).some(key => 
+    }).filter(candidate =>
+      Object.keys(candidate).some(key =>
         candidate[key] && candidate[key].toString().toLowerCase().includes(lowercasedTerm)
       )
     );
     setFilteredCandidates(filtered);
   };
 
-  // Open dialog for editing candidate
   const handleEditClick = (candidate) => {
     setCurrentCandidate(candidate);
     setOpen(true);
   };
 
-  // Close dialog
   const handleClose = () => {
     setOpen(false);
     setCurrentCandidate(null);
   };
 
-  // Handle candidate data change
   const handleCandidateChange = (event) => {
     const { name, value } = event.target;
     setCurrentCandidate({ ...currentCandidate, [name]: value });
   };
 
-  // Save candidate data
   const handleSave = async () => {
     try {
-      // Create a new object with only the fields to be updated
-      const updatedCandidate = {
-        name: currentCandidate.name,
-        email: currentCandidate.email,
-        phone: currentCandidate.phone,
-        totalExperience: currentCandidate.totalExperience,
-        relevantExperience: currentCandidate.relevantExperience,
-        domain: currentCandidate.domain,
-      };
-
-      await axios.patch(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, updatedCandidate, axiosConfig);
+      await axios.patch(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, currentCandidate, axiosConfig);
       fetchCandidates();
       handleClose();
     } catch (error) {
@@ -156,7 +133,6 @@ const SelectedCandidatesPage = () => {
     }
   };
 
-  // Delete candidate
   const handleDeleteClick = async (id) => {
     try {
       await axios.delete(`http://127.0.0.1:5000/candidates/${id}`, axiosConfig);
@@ -177,8 +153,8 @@ const SelectedCandidatesPage = () => {
         onChange={handleSearchTermChange}
         style={{ marginBottom: '20px' }}
       />
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} className="table-container">
+        <Table className="custom-table">
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
@@ -222,7 +198,6 @@ const SelectedCandidatesPage = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Edit Candidate</DialogTitle>
         <DialogContent>

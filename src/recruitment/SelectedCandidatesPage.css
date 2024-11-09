@@ -14,10 +14,6 @@
   --table-border-color: #ddd;
   --button-bg-color: #1a237e;
   --button-hover-bg-color: #0d1b5e;
-  --tab-bg-color: #f0f2f5;
-  --tab-selected-color: #1a237e;
-  --tab-indicator-color: #ff9800;
-  --tab-hover-bg-color: #e0e0e0;
   --table-hover-bg-color: #f5f5f5;
 }
 
@@ -28,8 +24,8 @@ body {
 }
 
 .container {
-  padding: 20px;
-  min-height: 100vh;
+  padding: 0px;
+  min-height: 70vh;
 }
 
 h1 {
@@ -39,32 +35,8 @@ h1 {
   color: #333;
 }
 
-.MuiTabs-root {
-  margin-bottom: 20px;
-  background-color: var(--tab-bg-color);
-  border-radius: 8px;
-}
-
-.MuiTab-root {
-  font-weight: bold;
-  color: var(--primary-color);
-  transition: color 0.3s ease, background-color 0.3s ease;
-}
-
-.MuiTab-root:hover {
-  background-color: var(--tab-hover-bg-color);
-}
-
-.MuiTab-root.Mui-selected {
-  color: var(--tab-selected-color);
-}
-
-.MuiTabs-indicator {
-  background-color: var(--tab-indicator-color);
-}
-
 .table-container {
-  max-height: 400px;
+  max-height: 640px;
   overflow-y: auto;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -90,28 +62,10 @@ h1 {
   background-color: var(--header-bg-color);
   color: var(--header-text-color);
   font-weight: bold;
-  cursor: pointer;
 }
 
 .custom-table tbody tr:hover {
   background-color: var(--table-hover-bg-color);
-}
-
-.input-field,
-.status-select,
-.feedback-select {
-  width: 100%;
-  padding: 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  transition: border-color 0.3s ease;
-}
-
-.input-field:focus,
-.status-select:focus,
-.feedback-select:focus {
-  border-color: var(--primary-color);
 }
 
 button {
@@ -126,18 +80,4 @@ button {
 
 button:hover {
   background-color: var(--button-hover-bg-color);
-}
-
-.dialog-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.dialog-title h2 {
-  margin: 0;
-}
-
-.dialog-title .MuiIconButton-root {
-  padding: 0;
 }

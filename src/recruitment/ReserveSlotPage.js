@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, MenuItem, Select, FormControl } from '@mui/material';
 import axios from 'axios';
+import './ReserveSlotPage.css';
 
 const ReserveSlotPage = () => {
   const [allCandidates, setAllCandidates] = useState([]);
@@ -229,8 +230,8 @@ const ReserveSlotPage = () => {
   };
 
   const renderTable = (candidates, stage, isNoShow = false) => (
-    <TableContainer component={Paper}>
-      <Table>
+    <TableContainer component={Paper} className="table-container">
+      <Table className="custom-table">
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
