@@ -38,6 +38,8 @@ h1 {
 .table-container {
   max-height: 640px;
   overflow-y: auto;
+  overflow-x: auto; /* Enable horizontal scroll */
+  max-width: 100%;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   background-color: #fff;
@@ -46,7 +48,7 @@ h1 {
 .custom-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto; /* Allow columns to adjust width based on content */
   border: 1px solid var(--table-border-color);
 }
 
@@ -56,6 +58,9 @@ h1 {
   text-align: left;
   font-size: 14px;
   border: 1px solid var(--table-border-color);
+  white-space: nowrap; /* Prevent text from wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add ellipsis for overflowed text */
 }
 
 .custom-table thead th {

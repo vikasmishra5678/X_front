@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import axios from 'axios';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './SelectedCandidatesPage.css';
 
 const SelectedCandidatesPage = () => {
@@ -53,12 +55,17 @@ const SelectedCandidatesPage = () => {
     const userIds = new Set();
     const selectedCandidates = candidates.map(candidate => {
       const status = candidateStatuses.find(status => status.candidateId === candidate.id);
+      const modifiedAt = status && candidate.modified_at && new Date(status.modified_at) > new Date(candidate.modified_at) 
+        ? status.modified_at 
+        : candidate.modified_at;
+      
       if (status) {
         if (status.l1_panel) userIds.add(status.l1_panel);
         if (status.l2_panel) userIds.add(status.l2_panel);
       }
       return {
         ...candidate,
+        modified_at: modifiedAt,
         l1_panel: status ? status.l1_panel : '',
         l1_date: status ? status.l1_date : '',
         l1_time: status ? status.l1_time : '',
@@ -125,11 +132,24 @@ const SelectedCandidatesPage = () => {
 
   const handleSave = async () => {
     try {
-      await axios.patch(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, currentCandidate, axiosConfig);
+      const { name, email, phone, totalExperience, relevantExperience, domain } = currentCandidate;
+      
+      const candidateData = {
+        name,
+        email,
+        phone,
+        totalExperience,
+        relevantExperience,
+        domain,
+      };
+  
+      await axios.patch(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, candidateData, axiosConfig);
       fetchCandidates();
       handleClose();
+      toast.success('Candidate edited successfully');
     } catch (error) {
       console.error('Error saving candidate data:', error);
+      toast.error('Error saving candidate data');
     }
   };
 
@@ -137,8 +157,10 @@ const SelectedCandidatesPage = () => {
     try {
       await axios.delete(`http://127.0.0.1:5000/candidates/${id}`, axiosConfig);
       fetchCandidates();
+      toast.success('Candidate deleted successfully');
     } catch (error) {
       console.error('Error deleting candidate:', error);
+      toast.error('Error deleting candidate');
     }
   };
 
@@ -153,10 +175,11 @@ const SelectedCandidatesPage = () => {
         onChange={handleSearchTermChange}
         style={{ marginBottom: '20px' }}
       />
-      <TableContainer component={Paper} className="table-container">
+      <TableContainer component={Paper} className="table-container" style={{ overflowX: 'auto' }}>
         <Table className="custom-table">
           <TableHead>
             <TableRow>
+              <TableCell>Modified At</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Phone</TableCell>
@@ -165,17 +188,16 @@ const SelectedCandidatesPage = () => {
               <TableCell>Skillset</TableCell>
               <TableCell>L1 Interviewer</TableCell>
               <TableCell>L1 Date</TableCell>
-              <TableCell>L1 Time</TableCell>
               <TableCell>L2 Interviewer</TableCell>
               <TableCell>L2 Date</TableCell>
-              <TableCell>L2 Time</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell>Candidate Status</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredCandidates.map((candidate, index) => (
               <TableRow key={index}>
+                <TableCell>{candidate.modified_at ? new Date(candidate.modified_at).toLocaleString() : 'N/A'}</TableCell>
                 <TableCell>{candidate.name}</TableCell>
                 <TableCell>{candidate.email}</TableCell>
                 <TableCell>{candidate.phone}</TableCell>
@@ -184,10 +206,8 @@ const SelectedCandidatesPage = () => {
                 <TableCell>{candidate.domain.join(', ')}</TableCell>
                 <TableCell>{interviewers[candidate.l1_panel]}</TableCell>
                 <TableCell>{candidate.l1_date}</TableCell>
-                <TableCell>{candidate.l1_time}</TableCell>
                 <TableCell>{interviewers[candidate.l2_panel]}</TableCell>
                 <TableCell>{candidate.l2_date}</TableCell>
-                <TableCell>{candidate.l2_time}</TableCell>
                 <TableCell>{candidate.candidate_status}</TableCell>
                 <TableCell>
                   <Button onClick={() => handleEditClick(candidate)}>Edit</Button>
@@ -274,6 +294,7 @@ const SelectedCandidatesPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <ToastContainer />
     </div>
   );
 };
