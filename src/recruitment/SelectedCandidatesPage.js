@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button,
+  Dialog, DialogActions, DialogContent, DialogTitle, Checkbox, FormControlLabel, FormGroup,
+  Grid, Typography
+} from '@mui/material';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -8,16 +12,22 @@ import './SelectedCandidatesPage.css';
 const SelectedCandidatesPage = () => {
   const [candidates, setCandidates] = useState([]);
   const [candidateStatuses, setCandidateStatuses] = useState([]);
-  const [interviewers, setInterviewers] = useState({});
   const [filteredCandidates, setFilteredCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
   const [currentCandidate, setCurrentCandidate] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [statusFilters, setStatusFilters] = useState({
+    l1_status: { selected: false, rejected: false, waiting: false, noShow: false },
+    l2_status: { selected: false, rejected: false, waiting: false, noShow: false },
+    candidate_status: { selected: false, rejected: false, Active: false, waiting: false }
+  });
+  const [sortConfig, setSortConfig] = useState(null);
+
+  const isDataLoadedRef = useRef(false); // Flag to check if initial data has been processed
   const token = localStorage.getItem('token');
   const axiosConfig = {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { 'Authorization': `Bearer ${token}` },
   };
 
   const fetchCandidates = async () => {
@@ -38,53 +48,77 @@ const SelectedCandidatesPage = () => {
     }
   };
 
-  const fetchInterviewerNames = async (userIds) => {
-    try {
-      const responses = await Promise.all(userIds.map(userId => axios.get(`http://127.0.0.1:5000/users/${userId}`, axiosConfig)));
-      const interviewerData = responses.reduce((acc, response) => {
-        acc[response.data.id] = response.data.name;
-        return acc;
-      }, {});
-      setInterviewers(interviewerData);
-    } catch (error) {
-      console.error('Error fetching interviewer names:', error);
+  const mapCandidatesWithStatuses = async () => {
+    if (candidates.length && candidateStatuses.length) {
+      const selectedCandidates = await Promise.all(
+        candidates.map(async (candidate) => {
+          const status = candidateStatuses.find((status) => status.candidateId === candidate.id);
+          const modifiedAt = status && candidate.modified_at && new Date(status.modified_at) > new Date(candidate.modified_at)
+            ? status.modified_at
+            : candidate.modified_at;
+
+          let l1PanelName = '';
+          let l2PanelName = '';
+
+          if (status) {
+            if (status.l1_panel) {
+              try {
+                const l1Response = await axios.get(`http://127.0.0.1:5000/users/${status.l1_panel}`, axiosConfig);
+                l1PanelName = l1Response.data.name;
+              } catch (error) {
+                console.error('Error fetching L1 interviewer name:', error);
+              }
+            }
+            if (status.l2_panel) {
+              try {
+                const l2Response = await axios.get(`http://127.0.0.1:5000/users/${status.l2_panel}`, axiosConfig);
+                l2PanelName = l2Response.data.name;
+              } catch (error) {
+                console.error('Error fetching L2 interviewer name:', error);
+              }
+            }
+          }
+
+          return {
+            ...candidate,
+            modified_at: modifiedAt,
+            l1_panel: status ? l1PanelName : '',
+            l1_date: status ? formatDate(status.l1_date) : '',
+            l1_time: status ? status.l1_time : '',
+            l1_status: status ? status.l1_status : '',
+            l2_panel: status ? l2PanelName : '',
+            l2_date: status ? formatDate(status.l2_date) : '',
+            l2_time: status ? status.l2_time : '',
+            l2_status: status ? status.l2_status : ''
+          };
+        })
+      );
+      setCandidates(selectedCandidates);
+      setFilteredCandidates(selectedCandidates);
+      isDataLoadedRef.current = true; // Mark that data has been processed
     }
   };
 
-  const mapCandidatesWithStatuses = () => {
-    const userIds = new Set();
-    const selectedCandidates = candidates.map(candidate => {
-      const status = candidateStatuses.find(status => status.candidateId === candidate.id);
-      const modifiedAt = status && candidate.modified_at && new Date(status.modified_at) > new Date(candidate.modified_at) 
-        ? status.modified_at 
-        : candidate.modified_at;
-      
-      if (status) {
-        if (status.l1_panel) userIds.add(status.l1_panel);
-        if (status.l2_panel) userIds.add(status.l2_panel);
-      }
-      return {
-        ...candidate,
-        modified_at: modifiedAt,
-        l1_panel: status ? status.l1_panel : '',
-        l1_date: status ? status.l1_date : '',
-        l1_time: status ? status.l1_time : '',
-        l2_panel: status ? status.l2_panel : '',
-        l2_date: status ? status.l2_date : '',
-        l2_time: status ? status.l2_time : '',
-      };
-    });
-    fetchInterviewerNames(Array.from(userIds));
-    setFilteredCandidates(selectedCandidates);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   useEffect(() => {
-    fetchCandidates();
-    fetchCandidateStatuses();
+    const initializeData = async () => {
+      await fetchCandidates();
+      await fetchCandidateStatuses();
+    };
+    initializeData();
   }, []);
 
   useEffect(() => {
-    if (candidates.length && candidateStatuses.length) {
+    // Only run `mapCandidatesWithStatuses` if both data sets are loaded and it hasn't been processed yet
+    if (candidates.length && candidateStatuses.length && !isDataLoadedRef.current) {
       mapCandidatesWithStatuses();
     }
   }, [candidates, candidateStatuses]);
@@ -96,107 +130,208 @@ const SelectedCandidatesPage = () => {
 
   const filterCandidates = (term) => {
     const lowercasedTerm = term.toLowerCase();
-    const filtered = candidates.map(candidate => {
-      const status = candidateStatuses.find(status => status.candidateId === candidate.id);
-      return {
-        ...candidate,
-        l1_panel: status ? status.l1_panel : '',
-        l1_date: status ? status.l1_date : '',
-        l1_time: status ? status.l1_time : '',
-        l2_panel: status ? status.l2_panel : '',
-        l2_date: status ? status.l2_date : '',
-        l2_time: status ? status.l2_time : '',
-      };
-    }).filter(candidate =>
-      Object.keys(candidate).some(key =>
-        candidate[key] && candidate[key].toString().toLowerCase().includes(lowercasedTerm)
-      )
+    const filtered = candidates.filter(candidate =>
+      Object.values(candidate).some(value => value && value.toString().toLowerCase().includes(lowercasedTerm))
     );
     setFilteredCandidates(filtered);
   };
+
+  const handleDateChange = (field) => (event) => {
+    setDateRange({ ...dateRange, [field]: event.target.value });
+  };
+
+  const handleStatusChange = (field, status) => (event) => {
+    setStatusFilters({
+      ...statusFilters,
+      [field]: { ...statusFilters[field], [status]: event.target.checked }
+    });
+  };
+
+  const applyFilters = () => {
+    let filtered = candidates;
+    const { startDate, endDate } = dateRange;
+
+    // Parse date strings into Date objects for comparison
+    const start = startDate ? new Date(startDate.split('-').reverse().join('-')) : null;
+    const end = endDate ? new Date(endDate.split('-').reverse().join('-')) : null;
+
+    if (start || end) {
+      filtered = filtered.filter(candidate => {
+        // Parse l1_date and l2_date from string to Date object
+        const l1Date = candidate.l1_date ? new Date(candidate.l1_date.split('-').reverse().join('-')) : null;
+        const l2Date = candidate.l2_date ? new Date(candidate.l2_date.split('-').reverse().join('-')) : null;
+
+        const isL1DateInRange = start && end ? l1Date >= start && l1Date <= end : true;
+        const isL2DateInRange = start && end ? l2Date >= start && l2Date <= end : true;
+
+        return (isL1DateInRange || isL2DateInRange);
+      });
+    }
+
+    Object.keys(statusFilters).forEach((field) => {
+      const activeStatuses = Object.entries(statusFilters[field])
+        .filter(([_, isChecked]) => isChecked)
+        .map(([status]) => status);
+
+      if (activeStatuses.length > 0) {
+        filtered = filtered.filter(candidate => activeStatuses.includes(candidate[field]));
+      }
+    });
+
+    setFilteredCandidates(filtered);
+  };
+  
+  const clearFilters = () => {
+    setDateRange({ startDate: '', endDate: '' });
+    setStatusFilters({
+      l1_status: { selected: false, rejected: false, waiting: false, noShow: false },
+      l2_status: { selected: false, rejected: false, waiting: false, noShow: false },
+      candidate_status: { selected: false, rejected: false, Active: false, waiting: false }
+    });
+    setFilteredCandidates(candidates);
+  };
+
+  const handleSort = (column) => {
+    let direction = 'ascending';
+    if (sortConfig && sortConfig.key === column && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key: column, direction });
+  };
+
+  const sortedCandidates = [...filteredCandidates].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    const comparison = a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0;
+    return direction === 'ascending' ? comparison : -comparison;
+  });
 
   const handleEditClick = (candidate) => {
     setCurrentCandidate(candidate);
     setOpen(true);
   };
-
+  
+  const handleDeleteClick = async (candidateId) => {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/candidates/${candidateId}`, axiosConfig);
+      toast.success('Candidate deleted successfully');
+      fetchCandidates(); // Refresh the candidate list after deletion
+    } catch (error) {
+      toast.error('Failed to delete candidate');
+      console.error('Error deleting candidate:', error);
+    }
+  };
+  
   const handleClose = () => {
     setOpen(false);
     setCurrentCandidate(null);
   };
-
+  
   const handleCandidateChange = (event) => {
     const { name, value } = event.target;
     setCurrentCandidate({ ...currentCandidate, [name]: value });
   };
-
+  
   const handleSave = async () => {
     try {
-      const { name, email, phone, totalExperience, relevantExperience, domain } = currentCandidate;
-      
-      const candidateData = {
-        name,
-        email,
-        phone,
-        totalExperience,
-        relevantExperience,
-        domain,
-      };
-  
-      await axios.patch(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, candidateData, axiosConfig);
-      fetchCandidates();
-      handleClose();
-      toast.success('Candidate edited successfully');
+      await axios.put(`http://127.0.0.1:5000/candidates/${currentCandidate.id}`, currentCandidate, axiosConfig);
+      toast.success('Candidate updated successfully');
+      setOpen(false);
+      fetchCandidates(); // Refresh the candidate list after update
     } catch (error) {
-      console.error('Error saving candidate data:', error);
-      toast.error('Error saving candidate data');
+      toast.error('Failed to update candidate');
+      console.error('Error updating candidate:', error);
     }
-  };
+  };  
 
-  const handleDeleteClick = async (id) => {
-    try {
-      await axios.delete(`http://127.0.0.1:5000/candidates/${id}`, axiosConfig);
-      fetchCandidates();
-      toast.success('Candidate deleted successfully');
-    } catch (error) {
-      console.error('Error deleting candidate:', error);
-      toast.error('Error deleting candidate');
-    }
-  };
 
   return (
     <div className="container">
-      <h1>All Candidates</h1>
-      <TextField
-        label="Search Candidates"
-        variant="outlined"
-        fullWidth
-        value={searchTerm}
-        onChange={handleSearchTermChange}
-        style={{ marginBottom: '20px' }}
-      />
-      <TableContainer component={Paper} className="table-container" style={{ overflowX: 'auto' }}>
-        <Table className="custom-table">
+      <Typography variant="h4">All Candidates</Typography>
+      {/* Date Range Section */}
+      <Grid container spacing={3} alignItems="center" style={{ marginTop: 20 }}>
+        <Grid item xs={12} md={4}>
+          <TextField
+            label="Start Date"
+            type="date"
+            value={dateRange.startDate}
+            onChange={handleDateChange('startDate')}
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            label="End Date"
+            type="date"
+            value={dateRange.endDate}
+            onChange={handleDateChange('endDate')}
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Filters Section */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          <Typography variant="h6">Candidate Status</Typography>
+          <FormGroup row>
+            <FormControlLabel control={<Checkbox />} label="Selected" checked={statusFilters.candidate_status.selected} onChange={handleStatusChange('candidate_status', 'selected')} />
+            <FormControlLabel control={<Checkbox />} label="Rejected" checked={statusFilters.candidate_status.rejected} onChange={handleStatusChange('candidate_status', 'rejected')} />
+            <FormControlLabel control={<Checkbox />} label="Active" checked={statusFilters.candidate_status.Active} onChange={handleStatusChange('candidate_status', 'Active')} />
+            <FormControlLabel control={<Checkbox />} label="Waiting" checked={statusFilters.candidate_status.waiting} onChange={handleStatusChange('candidate_status', 'waiting')} />
+          </FormGroup>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Typography variant="h6">L1 Status</Typography>
+          <FormGroup row>
+            <FormControlLabel control={<Checkbox />} label="Selected" checked={statusFilters.l1_status.selected} onChange={handleStatusChange('l1_status', 'selected')} />
+            <FormControlLabel control={<Checkbox />} label="Rejected" checked={statusFilters.l1_status.rejected} onChange={handleStatusChange('l1_status', 'rejected')} />
+            <FormControlLabel control={<Checkbox />} label="Waiting" checked={statusFilters.l1_status.waiting} onChange={handleStatusChange('l1_status', 'waiting')} />
+          </FormGroup>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Typography variant="h6">L2 Status</Typography>
+          <FormGroup row>
+            <FormControlLabel control={<Checkbox />} label="Selected" checked={statusFilters.l2_status.selected} onChange={handleStatusChange('l2_status', 'selected')} />
+            <FormControlLabel control={<Checkbox />} label="Rejected" checked={statusFilters.l2_status.rejected} onChange={handleStatusChange('l2_status', 'rejected')} />
+            <FormControlLabel control={<Checkbox />} label="Waiting" checked={statusFilters.l2_status.waiting} onChange={handleStatusChange('l2_status', 'waiting')} />
+          </FormGroup>
+        </Grid>
+      </Grid>
+
+      {/* Search and Apply Buttons */}
+      <div>
+        <Button variant="contained" onClick={applyFilters} style={{ marginTop: '20px', marginRight: 10 }}>Apply Filters</Button>
+        <Button variant="outlined" onClick={clearFilters} style={{ marginTop: '20px'}}>Clear Filters</Button>
+      </div>
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+        <TextField
+          label="Search"
+          value={searchTerm}
+          onChange={handleSearchTermChange}
+          fullWidth
+        />
+      </div>
+
+      <TableContainer component={Paper}>
+        <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Modified At</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Total Experience</TableCell>
-              <TableCell>Relevant Experience</TableCell>
-              <TableCell>Skillset</TableCell>
-              <TableCell>L1 Interviewer</TableCell>
-              <TableCell>L1 Date</TableCell>
-              <TableCell>L2 Interviewer</TableCell>
-              <TableCell>L2 Date</TableCell>
-              <TableCell>Candidate Status</TableCell>
+              {['Modified At', 'Name', 'Email', 'Phone', 'Total Experience', 'Relevant Experience', 'Skillset', 'L1 Interviewer', 'L1 Date', 'L2 Interviewer', 'L2 Date', 'Candidate Status'].map((column) => (
+                <TableCell key={column} onClick={() => handleSort(column.toLowerCase().replace(/\s/g, '_'))} style={{ cursor: 'pointer' }}>
+                  {column} {sortConfig?.key === column.toLowerCase().replace(/\s/g, '_') ? (sortConfig.direction === 'ascending' ? '🔼' : '🔽') : ''}
+                </TableCell>
+              ))}
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredCandidates.map((candidate, index) => (
-              <TableRow key={index}>
+            {sortedCandidates.map((candidate) => (
+              <TableRow key={candidate.id}>
                 <TableCell>{candidate.modified_at ? new Date(candidate.modified_at).toLocaleString() : 'N/A'}</TableCell>
                 <TableCell>{candidate.name}</TableCell>
                 <TableCell>{candidate.email}</TableCell>
@@ -204,9 +339,9 @@ const SelectedCandidatesPage = () => {
                 <TableCell>{candidate.totalExperience}</TableCell>
                 <TableCell>{candidate.relevantExperience}</TableCell>
                 <TableCell>{candidate.domain.join(', ')}</TableCell>
-                <TableCell>{interviewers[candidate.l1_panel]}</TableCell>
+                <TableCell>{candidate.l1_panel}</TableCell>
                 <TableCell>{candidate.l1_date}</TableCell>
-                <TableCell>{interviewers[candidate.l2_panel]}</TableCell>
+                <TableCell>{candidate.l2_panel}</TableCell>
                 <TableCell>{candidate.l2_date}</TableCell>
                 <TableCell>{candidate.candidate_status}</TableCell>
                 <TableCell>
@@ -218,82 +353,27 @@ const SelectedCandidatesPage = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Edit Candidate</DialogTitle>
         <DialogContent>
           {currentCandidate && (
             <>
-              <TextField
-                margin="dense"
-                label="Name"
-                type="text"
-                fullWidth
-                name="name"
-                value={currentCandidate.name}
-                onChange={handleCandidateChange}
-              />
-              <TextField
-                margin="dense"
-                label="Email"
-                type="email"
-                fullWidth
-                name="email"
-                value={currentCandidate.email}
-                onChange={handleCandidateChange}
-              />
-              <TextField
-                margin="dense"
-                label="Phone"
-                type="text"
-                fullWidth
-                name="phone"
-                value={currentCandidate.phone}
-                onChange={handleCandidateChange}
-              />
-              <TextField
-                margin="dense"
-                label="Total Experience"
-                type="number"
-                fullWidth
-                name="totalExperience"
-                value={currentCandidate.totalExperience}
-                onChange={handleCandidateChange}
-              />
-              <TextField
-                margin="dense"
-                label="Relevant Experience"
-                type="number"
-                fullWidth
-                name="relevantExperience"
-                value={currentCandidate.relevantExperience}
-                onChange={handleCandidateChange}
-              />
-              <TextField
-                margin="dense"
-                label="Skillset"
-                type="text"
-                fullWidth
-                name="domain"
-                value={currentCandidate.domain.join(', ')}
-                onChange={(e) => handleCandidateChange({
-                  target: {
-                    name: 'domain',
-                    value: e.target.value.split(',').map(skill => skill.trim())
-                  }
-                })}
-              />
+              <TextField margin="dense" label="Name" fullWidth name="name" value={currentCandidate.name} onChange={handleCandidateChange} />
+              <TextField margin="dense" label="Email" type="email" fullWidth name="email" value={currentCandidate.email} onChange={handleCandidateChange} />
+              <TextField margin="dense" label="Phone" fullWidth name="phone" value={currentCandidate.phone} onChange={handleCandidateChange} />
+              <TextField margin="dense" label="Total Experience" type="number" fullWidth name="totalExperience" value={currentCandidate.totalExperience} onChange={handleCandidateChange} />
+              <TextField margin="dense" label="Relevant Experience" type="number" fullWidth name="relevantExperience" value={currentCandidate.relevantExperience} onChange={handleCandidateChange} />
+              <TextField margin="dense" label="Skillset" fullWidth name="domain" value={currentCandidate.domain.join(', ')} onChange={(e) => handleCandidateChange({ target: { name: 'domain', value: e.target.value.split(',').map(skill => skill.trim()) } })} />
             </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} color="primary">
-            Save
-          </Button>
+          <Button onClick={handleClose} color="primary">Cancel</Button>
+          <Button onClick={handleSave} color="primary">Save</Button>
         </DialogActions>
       </Dialog>
+
       <ToastContainer />
     </div>
   );
