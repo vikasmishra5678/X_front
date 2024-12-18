@@ -408,7 +408,7 @@ const BookSlotsPage = ({}) => {
                       const endTime = addMinutes(startTime, slot.duration);
                       return (
                         <TableRow key={index}>
-                          <TableCell>{slot.date}</TableCell>
+                          <TableCell>{format(slot.date,'dd-MM-yyyy')}</TableCell>
                           <TableCell>{format(startTime, 'HH:mm')}</TableCell>
                           <TableCell>{format(endTime, 'HH:mm')}</TableCell>
                           <TableCell>{slot.duration} minutes</TableCell>

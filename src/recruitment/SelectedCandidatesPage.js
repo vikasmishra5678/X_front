@@ -5,6 +5,7 @@ import {
   Grid, Typography
 } from '@mui/material';
 import axios from 'axios';
+import format from 'date-fns/format';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './SelectedCandidatesPage.css';
@@ -101,11 +102,9 @@ const SelectedCandidatesPage = () => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    var date = new Date(dateStr);
+    date=format(date,'dd-MM-yyyy')
+    return date;
   };
 
   useEffect(() => {
@@ -152,14 +151,14 @@ const SelectedCandidatesPage = () => {
     const { startDate, endDate } = dateRange;
 
     // Parse date strings into Date objects for comparison
-    const start = startDate ? new Date(startDate.split('-').reverse().join('-')) : null;
-    const end = endDate ? new Date(endDate.split('-').reverse().join('-')) : null;
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
 
     if (start || end) {
       filtered = filtered.filter(candidate => {
         // Parse l1_date and l2_date from string to Date object
-        const l1Date = candidate.l1_date ? new Date(candidate.l1_date.split('-').reverse().join('-')) : null;
-        const l2Date = candidate.l2_date ? new Date(candidate.l2_date.split('-').reverse().join('-')) : null;
+        const l1Date = candidate.l1_date ? new Date(candidate.l1_date) : null;
+        const l2Date = candidate.l2_date ? new Date(candidate.l2_date) : null;
 
         const isL1DateInRange = start && end ? l1Date >= start && l1Date <= end : true;
         const isL2DateInRange = start && end ? l2Date >= start && l2Date <= end : true;
